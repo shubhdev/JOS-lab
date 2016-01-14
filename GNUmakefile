@@ -265,6 +265,7 @@ handin-check:
 
 tarball: handin-check
 	git archive --format=tar HEAD | gzip > lab$(LAB)-handin.tar.gz
+	base64 lab$(LAB)-handin.tar.gz > lab$(LAB)-handin.tar.gz.b64
 
 tarball-pref: handin-check
 	git archive --prefix=lab$(LAB)/ --format=tar HEAD | gzip > lab$(LAB)-handin.tar.gz
