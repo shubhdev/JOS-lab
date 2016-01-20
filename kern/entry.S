@@ -44,8 +44,7 @@ entry:
 	movw	$0x1234,0x472			# warm boot
 
 	# We haven't set up virtual memory yet, so we're running from
-	# the physical address the boot loader loaded the kernel at: 1MB
-	# (plus a few bytes).  However, the C code is linked to run at
+	# the physical address the boot loader loaded the kernel at: 1MB	# (plus a few bytes).  However, the C code is linked to run at
 	# KERNBASE+1MB.  Hence, we set up a trivial page directory that
 	# translates virtual addresses [KERNBASE, KERNBASE+4MB) to
 	# physical addresses [0, 4MB).  This 4MB region will be
