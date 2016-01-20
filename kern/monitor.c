@@ -75,7 +75,7 @@ void print_funcinfo(uint32_t eip){
 	//kern/monitor.c:101: mon_backtrace+15
 	int offset = eip - (uint32_t)info.eip_fn_addr;
 	//cprintf("%d\n",offset);
-	cprintf("%s:%d: %.*s+%d\n",info.eip_file,info.eip_line,info.eip_fn_namelen,info.eip_fn_name,offset);
+	cprintf("\t%s:%d: %.*s+%d\n",info.eip_file,info.eip_line,info.eip_fn_namelen,info.eip_fn_name,offset);
 }
 
 // A dummy function to get value of the eip register of a function. return the ret_address, which is the
@@ -94,13 +94,13 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	struct StackFrame * curr_frame = NULL; 
 	cprintf("Stack backtrace:\n    current eip=%08x\n",curr_eip);
 	while (curr_ebp != 0) {
-		cprintf("\t");
 		print_funcinfo(curr_eip);
 		curr_frame = (struct StackFrame *)(curr_ebp);
 		print_stackframe(curr_ebp,curr_frame);
 		curr_ebp = curr_frame->caller_ebp;
 		curr_eip = curr_frame->ret_addr;
 	}
+	print_funcinfo(curr_eip);
 	return 0;
 }
 
