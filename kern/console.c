@@ -434,7 +434,14 @@ cons_getc(void)
 static void
 cons_putc(int c)
 {
-	serial_putc(c);
+	if( (c & 0xFF) == '\b' ){
+		serial_putc('\b');
+		serial_putc(' ');
+		serial_putc('\b');
+	} 
+	else{
+		serial_putc(c);
+	}
 	lpt_putc(c);
 	cga_putc(c);
 }
