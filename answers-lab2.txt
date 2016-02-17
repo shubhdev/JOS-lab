@@ -8,7 +8,7 @@ a)  PDX(UVPT) == 956 -> [end,end+PGSIZE]
 
 b) [PDX(UPAGES),PDX(UPAGES)+N) == 957 -> [end+PGSIZE,end+PGSIZE+N)
 
-N = npages*(sizeof(PageInfo))
+N = ROUNDUP(npages*(sizeof(PageInfo)))
 
 c) [PDX(KERNSTACKTOP-KSTKSIZE),PDX(KERNSTACKTOP)] == 958-959 -> [PADDR(bootstack), PADDR(bootstack)+KSTKSIZE]
 
@@ -17,7 +17,7 @@ d) [PDX(KERNBASE),2^32) == 960-1023 -> [0,2^32-KERNBASE)
 Here,
 end = 0xf0119c10 
 end+PGSIZE = 0xf011ac10 
-N = 133112 
+N = 135168
 end+PGSIZE+N= 0xf013b408	      
 PADDR(bootstack) =0x0010f000 
 PADDR(bootstack)+KSTKSIZE = 0x00117000 

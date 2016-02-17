@@ -139,7 +139,7 @@ mem_init(void)
 	 ,nn,(uintptr_t)(end+PGSIZE+nn),PADDR(bootstack),PADDR(bootstack)+KSTKSIZE,-KERNBASE);
 	} 
 	*/
-	//cprintf("%d",sizeof(struct PageInfo));
+	//cprintf("%u\n",ROUNDUP(npages*sizeof(struct PageInfo),PGSIZE));
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
 	kern_pgdir = (pde_t *) boot_alloc(PGSIZE);
@@ -187,7 +187,8 @@ mem_init(void)
 	//      (ie. perm = PTE_U | PTE_P)
 	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
-	boot_map_region(kern_pgdir,UPAGES,PTSIZE,PADDR(pages),PTE_P|PTE_U);
+	int nn = ROUNDUP(npages*sizeof(struct PageInfo),PGSIZE);
+	boot_map_region(kern_pgdir,UPAGES,nn,PADDR(pages),PTE_P|PTE_U);
 	//boot_map_region(kern_pgdir,(uintptr_t)pages,npages*sizeof(struct PageInfo),PADDR(pages),PTE_P|PTE_W);
 	///////////////////////////////////////////////////////////////////
 	// Use the physical memory that 'bootstack' refers to as the kernel
@@ -701,7 +702,7 @@ check_kern_pgdir(void)
 	pgdir = kern_pgdir;
 	//cprintf("clear!\n");
 	// check pages array
-	n = (npages*sizeof(struct PageInfo), PGSIZE);
+	n = ROUNDUP(npages*sizeof(struct PageInfo), PGSIZE);
 	for (i = 0; i < n; i += PGSIZE)
 		assert(check_va2pa(pgdir, UPAGES + i) == PADDR(pages) + i);
 	//cprintf("clear!\n");
