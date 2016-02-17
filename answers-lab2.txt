@@ -1,0 +1,86 @@
+
+Ans 1
+=======
+
+Acc to the virtual memory map given in , we have mapped the following segments:
+
+a)  PDX(UVPT) == 956 -> [end,end+PGSIZE]
+
+b) [PDX(UPAGES),PDX(UPAGES)+N) == 957 -> [end+PGSIZE,end+PGSIZE+N)
+
+N = npages*(sizeof(PageInfo))
+
+c) [PDX(KERNSTACKTOP-KSTKSIZE),PDX(KERNSTACKTOP)] == 958-959 -> [PADDR(bootstack), PADDR(bootstack)+KSTKSIZE]
+
+d) [PDX(KERNBASE),2^32) == 960-1023 -> [0,2^32-KERNBASE) 
+
+Here,
+end = 0xf0119c10 
+end+PGSIZE = 0xf011ac10 
+N = 133112 
+end+PGSIZE+N= 0xf013b408	      
+PADDR(bootstack) =0x0010f000 
+PADDR(bootstack)+KSTKSIZE = 0x00117000 
+2^32-KERNBASE = 0x10000000
+
+Ans 2
+=======
+
+Users can't access the kernel memory since the PTE_U permission bit is not set.
+Hence the x86 mmu hardware will throw an exception a program tried to access that memory. Moreover, the UPAGES segment although has the PTE_U bit set, it is read only (PTE_W bit not set), hence can't be overwritten by the user or the kernel processes.
+
+Ans3
+=======
+
+The array of pageinfo's is stored in UPAGE section, which has size as PTSIZE = 2^22 bytes
+An object of struct PageInfo takes up 8 bytes(sizeof(struct PageInfo))
+Hence maximum PageInfo objects in UPAGES section = 2^22 / 2^3 = 2^19 
+
+Each object refers to a page in the physical memory, which is 4096 bytes in size.
+Hence maximum possible physical memory = 2^19 * 2^12 = 2^31 bytes = 2GB
+
+
+Ans4
+=======
+
+If we have the maximum possible physical memory that means total pages = 2^19
+Thus the total size of 'pages' array = 2^19 * 2^3 = 2^22 bytes = 4MB
+size of Page Directory = 2^10 * 4 bytes = 2^12 bytes = 4KB
+size of page table = 2^10 * 4 = 2^12 bytes
+Total number of page tables = 2^10
+Total memory used by page tables = 2^10 * 2^12 = 2^22 bytes = 4MB
+
+Hence total overhead  = 4MB + 4KB + 4MB = 8MB + 4KB
+
+A point to note is that 4MB + 4KB is the overhead irrespective of the physical memory of the system.
+
+
+Ans5
+=======
+
+jmp	*%eax
+This instruction transitions us to higher EIP
+
+The page translation defined in entry_pgdir.c is a simple static mapping, which translates VA [0,4MB] and VA[0+KERNBASE,4MB+KERNBASE] to PA[0,4MB]
+
+Hence we can work at a low EIP since it is also mapped to the correct physical location.
+This also works when we shift EIP above KERNBASE.
+
+We have to make the transition, since the  lower 4MB of the virtual memory have to be mapped to some other location, as they can be used by the user.
+Hence, the 'correct' virtual address of the EIP is the one above the KERNBASE.
+
+
+
+LEARNINGS
+===========
+
+From this lab, I learned
+1) about a possible layout of the virtual memory
+2) the precise functioning of the paging mechanism
+3) how pages are protected
+4) zeroing out a page is handled at the page allocation level
+5) how virtual memory > actual physical memory is actually managed
+6) a possible way to manintain the free pages in memory
+
+
+

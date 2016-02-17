@@ -91,7 +91,7 @@ boot_alloc(uint32_t n)
 	if (!nextfree) {
 		extern char end[];
 		nextfree = ROUNDUP((char *) end, PGSIZE);
-		cprintf("end : %08x\n",end);
+		//cprintf("end : %08x\n",end);
 	}
 	if(n == 0) return nextfree;
 	// Allocate a chunk large enough to hold 'n' bytes, then update
@@ -99,7 +99,7 @@ boot_alloc(uint32_t n)
 	// to a multiple of PGSIZE.
 	//
 	// LAB 2: Your code here.
-	cprintf("nextfree : %08x\n",nextfree);
+	//cprintf("nextfree : %08x\n",nextfree);
 	
 	//check if we have enough physical memory
 	uint32_t npages_required = ROUNDUP(n,PGSIZE)/PGSIZE;
@@ -130,8 +130,16 @@ mem_init(void)
 
 	// Find out how much memory the machine has (npages & npages_basemem).
 	i386_detect_memory();
-
-
+	/*
+	 For Question 1
+	int nn = npages*sizeof(struct PageInfo);
+	{extern char end[];
+	cprintf("end=%08x end+pgsize = %08x n=%d end+pgsize+n=%08x\
+	 bootstack=%08x bstack+kstksize=%08x %08x",(uintptr_t)end,(uintptr_t)(end+PGSIZE)\
+	 ,nn,(uintptr_t)(end+PGSIZE+nn),PADDR(bootstack),PADDR(bootstack)+KSTKSIZE,-KERNBASE);
+	} 
+	*/
+	//cprintf("%d",sizeof(struct PageInfo));
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
 	kern_pgdir = (pde_t *) boot_alloc(PGSIZE);
@@ -201,7 +209,7 @@ mem_init(void)
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
 	// Your code goes here:
-	boot_map_region(kern_pgdir,KERNBASE,-KERNBASE,0,PTE_W);
+	boot_map_region(kern_pgdir,KERNBASE,-KERNBASE,0,PTE_P | PTE_W);
 	// Check that the initial page directory has been set up correctly.
 	// Remove this line when you're ready to test this function.
 	//panic("mem_init: This function is not finished\n");
@@ -375,7 +383,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		struct PageInfo * new_pt = page_alloc(ALLOC_ZERO);
 		if(new_pt == NULL){
 			//out of memory, return NULL
-			cprintf("Out of memory!\n");
+			//cprintf("Out of memory!\n");
 			return NULL;
 		}
 		new_pt->pp_ref++;
@@ -406,13 +414,14 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 // Hint: the TA solution uses pgdir_walk
 static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
-{
+{	
+	//cprintf("[%u,%u] -> [%08x,%08x]\n",PDX(va),PDX(va+size),pa,pa+size);
 	uintptr_t curr_va = va ;
 	physaddr_t  curr_pa = pa;
 	//if(curr_va == KERNBASE) cprintf("$$$$$$$$$$$%08x < %08x\n",curr_va,va+size);
 	//for(; curr_va < va+size; curr_va += PGSIZE , curr_pa += PGSIZE){
-		int i;
-		for(i = 0 ; i < size/PGSIZE ; i++, curr_va += PGSIZE, curr_pa += PGSIZE){	
+		int i = 0;
+		for(; i < size/PGSIZE ; i++, curr_va += PGSIZE, curr_pa += PGSIZE){	
 		//cprintf("%u\n",curr_pa);
 		//assert(curr_va >= 0);	
 		pte_t * pte = pgdir_walk(pgdir,(void*)curr_va,1);
@@ -690,12 +699,12 @@ check_kern_pgdir(void)
 	pde_t *pgdir;
 
 	pgdir = kern_pgdir;
-	cprintf("clear!\n");
+	//cprintf("clear!\n");
 	// check pages array
 	n = (npages*sizeof(struct PageInfo), PGSIZE);
 	for (i = 0; i < n; i += PGSIZE)
 		assert(check_va2pa(pgdir, UPAGES + i) == PADDR(pages) + i);
-	cprintf("clear!\n");
+	//cprintf("clear!\n");
 
 
 	// check phys mem
@@ -703,24 +712,25 @@ check_kern_pgdir(void)
 		//cprintf("physical map %08x\n",check_va2pa(pgdir, KERNBASE + i));
 		assert(check_va2pa(pgdir, KERNBASE + i) == i);
 	}
-	cprintf("clear!\n");
+	//cprintf("clear!\n");
 	// check kernel stack
 	for (i = 0; i < KSTKSIZE; i += PGSIZE)
 		assert(check_va2pa(pgdir, KSTACKTOP - KSTKSIZE + i) == PADDR(bootstack) + i);
 	assert(check_va2pa(pgdir, KSTACKTOP - PTSIZE) == ~0);
-	cprintf("clear!\n");
+	//cprintf("clear!\n");
 
 	// check PDE permissions
 	for (i = 0; i < NPDENTRIES; i++) {
 		switch (i) {
-		case PDX(UVPT):
-		case PDX(KSTACKTOP-1):
+		case PDX(UVPT)://cprintf("UVPT : %u\n",i);
+		case PDX(KSTACKTOP-1)://cprintf("KSTACKTOP : %u\n",i);
 		case PDX(UPAGES):
+			//if(i == PDX(UPAGES)) cprintf("upages : %u\n",i);
 			assert(pgdir[i] & PTE_P);
 			break;
 		default:
 			if (i >= PDX(KERNBASE)) {
-				//cprintf("%d\n",i);
+				//cprintf("$$");
 				assert(pgdir[i] & PTE_P);
 				assert(pgdir[i] & PTE_W);
 			} else
