@@ -1,5 +1,8 @@
-
 Ans 1
+=======
+Since value is a pointer, its value is a virtual address, and hence x should be of type uintptr_t.
+
+Ans 2
 =======
 
 Acc to the virtual memory map given in , we have mapped the following segments:
@@ -23,13 +26,13 @@ PADDR(bootstack) =0x0010f000
 PADDR(bootstack)+KSTKSIZE = 0x00117000 
 2^32-KERNBASE = 0x10000000
 
-Ans 2
+Ans 3
 =======
 
 Users can't access the kernel memory since the PTE_U permission bit is not set.
 Hence the x86 mmu hardware will throw an exception a program tried to access that memory. Moreover, the UPAGES segment although has the PTE_U bit set, it is read only (PTE_W bit not set), hence can't be overwritten by the user or the kernel processes.
 
-Ans3
+Ans 4
 =======
 
 The array of pageinfo's is stored in UPAGE section, which has size as PTSIZE = 2^22 bytes
@@ -40,7 +43,7 @@ Each object refers to a page in the physical memory, which is 4096 bytes in size
 Hence maximum possible physical memory = 2^19 * 2^12 = 2^31 bytes = 2GB
 
 
-Ans4
+Ans 5
 =======
 
 If we have the maximum possible physical memory that means total pages = 2^19
@@ -55,7 +58,7 @@ Hence total overhead  = 4MB + 4KB + 4MB = 8MB + 4KB
 A point to note is that 4MB + 4KB is the overhead irrespective of the physical memory of the system.
 
 
-Ans5
+Ans 6
 =======
 
 jmp	*%eax
