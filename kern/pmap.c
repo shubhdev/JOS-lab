@@ -166,6 +166,9 @@ mem_init(void)
 
 	pages = (struct PageInfo*)boot_alloc(npages*sizeof(struct PageInfo));
 	memset(pages,0,npages*sizeof(struct PageInfo));
+
+	envs = (struct Env*)boot_alloc(NENV*sizeof(struct Env));
+	memset(envs,0,NENV*sizeof(struct Env));
 	//////////////////////////////////////////////////////////////////////
 	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
 	// LAB 3: Your code here.
@@ -192,11 +195,12 @@ mem_init(void)
 	//      (ie. perm = PTE_U | PTE_P)
 	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
+	
+	///////////////////////////////////////////////////////////////////
+	
 	int nn = ROUNDUP(npages*sizeof(struct PageInfo),PGSIZE);
 	boot_map_region(kern_pgdir,UPAGES,nn,PADDR(pages),PTE_P|PTE_U);
 	//boot_map_region(kern_pgdir,(uintptr_t)pages,npages*sizeof(struct PageInfo),PADDR(pages),PTE_P|PTE_W);
-	
-	///////////////////////////////////////////////////////////////////
 	
 	//////////////////////////////////////////////////////////////////////
 	// Map the 'envs' array read-only by the user at linear address UENVS
@@ -208,6 +212,8 @@ mem_init(void)
 
 	//////////////////////////////////////////////////////////////////////
 
+	nn = ROUNDUP(NENV*sizeof(struct Env),PGSIZE);
+	boot_map_region(kern_pgdir,UENVS,nn,PADDR(envs),PTE_P | PTE_U);	
 	// Use the physical memory that 'bootstack' refers to as the kernel
 	// stack.  The kernel stack grows down from virtual address KSTACKTOP.
 	// We consider the entire range from [KSTACKTOP-PTSIZE, KSTACKTOP)
@@ -481,7 +487,9 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 	pte_t * pte = pgdir_walk(pgdir,va,1);
 	
 	if(pte == NULL) return -E_NO_MEM;
-	
+	if(pp == NULL){
+		panic("Inavalid page for insert : NULL\n");
+	}
 	// we first increase the ref count, since if the same page is currently allocated to va in the same pgdir,
 	// calling page_remove before increasing the count might cause the page ref count to become 0
 	// and hence cause the page to be freed, which is not what we want

@@ -116,7 +116,13 @@ env_init(void)
 {
 	// Set up envs array
 	// LAB 3: Your code here.
-
+	int i;
+	for(i = 0; i < NENV; i++){
+		// env[i] is already zeroed out, only set the non zero members
+		envs[i].env_status = ENV_FREE;
+		if(i > 0) envs[i-1].env_link = &envs[i];
+	}
+	env_free_list = &envs[0]; 
 	// Per-CPU part of the initialization
 	env_init_percpu();
 }
@@ -179,7 +185,10 @@ env_setup_vm(struct Env *e)
 	//    - The functions in kern/pmap.h are handy.
 
 	// LAB 3: Your code here.
-
+	p->pp_ref++;
+	e->env_pgdir = page2kva(p);
+	// since the mapping is mostly same as the kernel address space, copy the kern_pgdir
+	memcpy(e->env_pgdir,kern_pgdir,PGSIZE);
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
 	e->env_pgdir[PDX(UVPT)] = PADDR(e->env_pgdir) | PTE_P | PTE_U;
@@ -267,6 +276,27 @@ region_alloc(struct Env *e, void *va, size_t len)
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round (va + len) up.
 	//   (Watch out for corner-cases!)
+	start_va = ROUNDDOWN((uint32_t)va,PGSIZE);
+	end_va = ROUNDUP((uint32_t)va + (uint32_t)len,PGSIZE);
+	
+	// Not sure if should check the below condition or not
+
+	// if( end_va >= UTOP){
+	// 	panic("Cannot remap virtual address above UTOP\n")
+	// }
+	for(; start_va < end_va; start_va += PGSIZE){
+		//assign va to a new physical page
+
+		//allocate a page
+		struct PageInfo * pp = page_alloc(0);
+		if(!pp){
+			panic("Error in region_alloc : %e",-E_NO_MEM);
+		}
+		//Not checking va is not already mapped, page_insert removes the mapping 
+		//if va is mapped to a page before 
+
+		page_insert(e->env_pgdir,pp,start_va,PTE_P | PTE_U | PTE_W);
+	}
 }
 
 //
