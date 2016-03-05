@@ -19,6 +19,9 @@ static struct Env *env_free_list;	// Free environment list
 
 #define ENVGENSHIFT	12		// >= LOGNENV
 #define SECTSIZE 512
+void readsect(void*, uint32_t);
+void readseg(uint32_t, uint32_t, uint32_t);
+
 // Global descriptor table.
 //
 // Set up global descriptor table (GDT) with separate segments for
@@ -276,7 +279,7 @@ region_alloc(struct Env *e, void *va, size_t len)
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round (va + len) up.
 	//   (Watch out for corner-cases!)
-	start_va = ROUNDDOWN((uint32_t)va,PGSIZE);
+	uint32_t start_va = ROUNDDOWN((uint32_t)va,PGSIZE),
 	end_va = ROUNDUP((uint32_t)va + (uint32_t)len,PGSIZE);
 	
 	// Not sure if should check the below condition or not
@@ -360,17 +363,16 @@ load_icode(struct Env *e, uint8_t *binary)
 	// change the page directory to environment's pgdir. This can be done by lcr3 inst.
 	// as can be seen in the env_free function below.
 	if(!e || !(e->env_pgdir)) panic("load_icode invalid environment\n");
-	lcr3(PADDR(e->env_pgdir));
 	// now we can simply copy to the desired va, and the mapping used would be the env's
 	// pgdir, not the kernel page dir.
 
 	struct Elf* elf = (struct Elf*)binary;
-	readseg((uint32_t) elf, SECTSIZE*8, 0);
 
 	// is this a valid ELF?
 	if (elf->e_magic != ELF_MAGIC)
-		panic("Bad binary!\n");
-
+		panic("Bad binary! : %u\n",elf->e_magic);
+	lcr3(PADDR(e->env_pgdir));
+	struct Proghdr *ph, *eph;
 	// load each program segment (ignores ph flags)
 	ph = (struct Proghdr *) ((uint8_t *) elf + elf->e_phoff);
 	eph = ph + elf->e_phnum;
@@ -378,11 +380,11 @@ load_icode(struct Env *e, uint8_t *binary)
 		if(ph->p_type != ELF_PROG_LOAD) continue;
 		// p_va is the load address of this segment in memory
 		//allocate memory for this segment
-		region_alloc(e,ph->p_va,ph->p_memsz);
-		readseg(ph->p_va, ph->p_memsz, ph->p_offset);
+		region_alloc(e,(void*)ph->p_va,ph->p_memsz);
+		memcpy((void*)ph->p_va, binary + ph->p_offset,ph->p_filesz);
 		// zero out the difference between the filesz and memsz
 		if(ph->p_filesz > ph->p_memsz) panic("Invalid binary, filesz > memsz!\n");
-		memset(ph->p_va + ph->p_filesz,0,ph->p_memsz - ph->p_filesz);
+		memset((void*)ph->p_va + ph->p_filesz,0,ph->p_memsz - ph->p_filesz);
 	}
 	//restore the kernel page dir
 	lcr3(PADDR(kern_pgdir));
@@ -410,7 +412,7 @@ readseg(uint32_t va, uint32_t count, uint32_t offset)
 	end_va = va + count;
 
 	// round down to sector boundary
-	pa &= ~(SECTSIZE - 1);
+	va &= ~(SECTSIZE - 1);
 
 	// translate from bytes to sectors, and kernel starts at sector 1
 	offset = (offset / SECTSIZE) + 1;
@@ -468,7 +470,7 @@ void
 env_create(uint8_t *binary, enum EnvType type)
 {
 	// LAB 3: Your code here.
-	Struct Env* e;
+	struct Env* e;
 	int ret;
 	if((ret = env_alloc(&e,0)) < 0) panic("env_create failed : %e",ret);
 	load_icode(e,binary);
@@ -588,9 +590,9 @@ env_run(struct Env *e)
 	//	e->env_tf to sensible values.
 
 	// LAB 3: Your code here.
-	if(curenv&& curenv->env_status == ENV_RUNNING) curenv->env_status = ENV_RUNNABLE;
+	if(curenv && curenv->env_status == ENV_RUNNING) curenv->env_status = ENV_RUNNABLE;
 	curenv = e;
-	curenv->env_status = RUNNING;
+	curenv->env_status = ENV_RUNNING;
 	curenv->env_runs++;
 	lcr3(PADDR(curenv->env_pgdir));
 	env_pop_tf(&curenv->env_tf);
