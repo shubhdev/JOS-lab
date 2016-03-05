@@ -18,9 +18,6 @@ static struct Env *env_free_list;	// Free environment list
 					// (linked by Env->env_link)
 
 #define ENVGENSHIFT	12		// >= LOGNENV
-#define SECTSIZE 512
-void readsect(void*, uint32_t);
-void readseg(uint32_t, uint32_t, uint32_t);
 
 // Global descriptor table.
 //
@@ -402,61 +399,6 @@ load_icode(struct Env *e, uint8_t *binary)
 	}
 	// set the trapframe eip to the entry point
 	e->env_tf.tf_eip = elf->e_entry;
-}
-
-void
-readseg(uint32_t va, uint32_t count, uint32_t offset)
-{
-	uint32_t end_va;
-
-	end_va = va + count;
-
-	// round down to sector boundary
-	va &= ~(SECTSIZE - 1);
-
-	// translate from bytes to sectors, and kernel starts at sector 1
-	offset = (offset / SECTSIZE) + 1;
-
-	// If this is too slow, we could read lots of sectors at a time.
-	// We'd write more to memory than asked, but it doesn't matter --
-	// we load in increasing order.
-	while (va < end_va) {
-		// Since we haven't enabled paging yet and we're using
-		// an identity segment mapping (see boot.S), we can
-		// use physical addresses directly.  This won't be the
-		// case once JOS enables the MMU.
-		readsect((uint8_t*) va, offset);
-		va += SECTSIZE;
-		offset++;
-	}
-}
-
-void
-waitdisk(void)
-{
-	// wait for disk reaady
-	while ((inb(0x1F7) & 0xC0) != 0x40)
-		/* do nothing */;
-}
-
-void
-readsect(void *dst, uint32_t offset)
-{
-	// wait for disk to be ready
-	waitdisk();
-
-	outb(0x1F2, 1);		// count = 1
-	outb(0x1F3, offset);
-	outb(0x1F4, offset >> 8);
-	outb(0x1F5, offset >> 16);
-	outb(0x1F6, (offset >> 24) | 0xE0);
-	outb(0x1F7, 0x20);	// cmd 0x20 - read sectors
-
-	// wait for disk to be ready
-	waitdisk();
-
-	// read a sector
-	insl(0x1F0, dst, SECTSIZE/4);
 }
 
 //
