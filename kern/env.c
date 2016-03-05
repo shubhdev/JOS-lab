@@ -18,7 +18,7 @@ static struct Env *env_free_list;	// Free environment list
 					// (linked by Env->env_link)
 
 #define ENVGENSHIFT	12		// >= LOGNENV
-
+#define SECTSIZE 512
 // Global descriptor table.
 //
 // Set up global descriptor table (GDT) with separate segments for
@@ -187,7 +187,7 @@ env_setup_vm(struct Env *e)
 	// LAB 3: Your code here.
 	p->pp_ref++;
 	e->env_pgdir = page2kva(p);
-	// since the mapping is mostly same as the kernel address space, copy the kern_pgdir
+	// since the mapping is mostly same as the kernel address space, copy the kernel page directory
 	memcpy(e->env_pgdir,kern_pgdir,PGSIZE);
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
@@ -295,7 +295,10 @@ region_alloc(struct Env *e, void *va, size_t len)
 		//Not checking va is not already mapped, page_insert removes the mapping 
 		//if va is mapped to a page before 
 
-		page_insert(e->env_pgdir,pp,start_va,PTE_P | PTE_U | PTE_W);
+		int ret = page_insert(e->env_pgdir,pp,(void*)start_va,PTE_P | PTE_U | PTE_W);
+		if(ret < 0){
+			panic("Error in page_insert : %e\n",ret);
+		}
 	}
 }
 
@@ -354,10 +357,104 @@ load_icode(struct Env *e, uint8_t *binary)
 
 	// LAB 3: Your code here.
 
+	// change the page directory to environment's pgdir. This can be done by lcr3 inst.
+	// as can be seen in the env_free function below.
+	if(!e || !(e->env_pgdir)) panic("load_icode invalid environment\n");
+	lcr3(PADDR(e->env_pgdir));
+	// now we can simply copy to the desired va, and the mapping used would be the env's
+	// pgdir, not the kernel page dir.
+
+	struct Elf* elf = (struct Elf*)binary;
+	readseg((uint32_t) elf, SECTSIZE*8, 0);
+
+	// is this a valid ELF?
+	if (elf->e_magic != ELF_MAGIC)
+		panic("Bad binary!\n");
+
+	// load each program segment (ignores ph flags)
+	ph = (struct Proghdr *) ((uint8_t *) elf + elf->e_phoff);
+	eph = ph + elf->e_phnum;
+	for (; ph < eph; ph++){
+		if(ph->p_type != ELF_PROG_LOAD) continue;
+		// p_va is the load address of this segment in memory
+		//allocate memory for this segment
+		region_alloc(e,ph->p_va,ph->p_memsz);
+		readseg(ph->p_va, ph->p_memsz, ph->p_offset);
+		// zero out the difference between the filesz and memsz
+		if(ph->p_filesz > ph->p_memsz) panic("Invalid binary, filesz > memsz!\n");
+		memset(ph->p_va + ph->p_filesz,0,ph->p_memsz - ph->p_filesz);
+	}
+	//restore the kernel page dir
+	lcr3(PADDR(kern_pgdir));
 	// Now map one page for the program's initial stack
 	// at virtual address USTACKTOP - PGSIZE.
 
 	// LAB 3: Your code here.
+	struct PageInfo* pp = page_alloc(~ALLOC_ZERO);
+	if(!pp){
+		panic("Error initalizing stack : %e",-E_NO_MEM);
+	}
+	int ret = page_insert(e->env_pgdir,pp,(void*)(USTACKTOP-PGSIZE),PTE_P|PTE_U|PTE_W);
+	if(ret < 0){
+		panic("Error initializing user stack : %e\n",ret);
+	}
+	// set the trapframe eip to the entry point
+	e->env_tf.tf_eip = elf->e_entry;
+}
+
+void
+readseg(uint32_t va, uint32_t count, uint32_t offset)
+{
+	uint32_t end_va;
+
+	end_va = va + count;
+
+	// round down to sector boundary
+	pa &= ~(SECTSIZE - 1);
+
+	// translate from bytes to sectors, and kernel starts at sector 1
+	offset = (offset / SECTSIZE) + 1;
+
+	// If this is too slow, we could read lots of sectors at a time.
+	// We'd write more to memory than asked, but it doesn't matter --
+	// we load in increasing order.
+	while (va < end_va) {
+		// Since we haven't enabled paging yet and we're using
+		// an identity segment mapping (see boot.S), we can
+		// use physical addresses directly.  This won't be the
+		// case once JOS enables the MMU.
+		readsect((uint8_t*) va, offset);
+		va += SECTSIZE;
+		offset++;
+	}
+}
+
+void
+waitdisk(void)
+{
+	// wait for disk reaady
+	while ((inb(0x1F7) & 0xC0) != 0x40)
+		/* do nothing */;
+}
+
+void
+readsect(void *dst, uint32_t offset)
+{
+	// wait for disk to be ready
+	waitdisk();
+
+	outb(0x1F2, 1);		// count = 1
+	outb(0x1F3, offset);
+	outb(0x1F4, offset >> 8);
+	outb(0x1F5, offset >> 16);
+	outb(0x1F6, (offset >> 24) | 0xE0);
+	outb(0x1F7, 0x20);	// cmd 0x20 - read sectors
+
+	// wait for disk to be ready
+	waitdisk();
+
+	// read a sector
+	insl(0x1F0, dst, SECTSIZE/4);
 }
 
 //
@@ -371,6 +468,11 @@ void
 env_create(uint8_t *binary, enum EnvType type)
 {
 	// LAB 3: Your code here.
+	Struct Env* e;
+	int ret;
+	if((ret = env_alloc(&e,0)) < 0) panic("env_create failed : %e",ret);
+	load_icode(e,binary);
+	e->env_type = type;
 }
 
 //
@@ -486,7 +588,12 @@ env_run(struct Env *e)
 	//	e->env_tf to sensible values.
 
 	// LAB 3: Your code here.
-
-	panic("env_run not yet implemented");
+	if(curenv&& curenv->env_status == ENV_RUNNING) curenv->env_status = ENV_RUNNABLE;
+	curenv = e;
+	curenv->env_status = RUNNING;
+	curenv->env_runs++;
+	lcr3(PADDR(curenv->env_pgdir));
+	env_pop_tf(&curenv->env_tf);
+	//panic("env_run not yet implemented");
 }
 
