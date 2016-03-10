@@ -24,8 +24,23 @@ struct Gatedesc idt[256] = { { 0 } };
 struct Pseudodesc idt_pd = {
 	sizeof(idt) - 1, (uint32_t) idt
 };
-
-
+void TH_DIVIDE();
+void TH_DEBUG();
+void TH_NMI();
+void TH_BRKPT();
+void TH_OFLOW();
+void TH_BOUND();
+void TH_ILLOP();
+void TH_DEVICE();
+void TH_DBLFLT();
+void TH_COPROC();
+void TH_TSS();
+void TH_SEGNP();
+void TH_STACK();
+void TH_GPFLT();
+void TH_PGFLT();
+void TH_FPERR();
+void TH_SYSCALL();
 static const char *trapname(int trapno)
 {
 	static const char * const excnames[] = {
@@ -65,7 +80,22 @@ trap_init(void)
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
-
+	SETGATE(idt[T_DIVIDE],1,GD_KT,&(TH_DIVIDE),0);
+	SETGATE(idt[T_DEBUG],1,GD_KT,&(TH_DEBUG),0);
+	SETGATE(idt[T_NMI],1,GD_KT,&(TH_NMI),0);
+	SETGATE(idt[T_BRKPT],1,GD_KT,&(TH_BRKPT),3);
+	SETGATE(idt[T_OFLOW],1,GD_KT,&(TH_OFLOW),0);
+	SETGATE(idt[T_BOUND],1,GD_KT,&(TH_BOUND),0);
+	SETGATE(idt[T_ILLOP],1,GD_KT,&(TH_ILLOP),0);
+	SETGATE(idt[T_DEVICE],1,GD_KT,&(TH_DEVICE),0);
+	SETGATE(idt[T_DBLFLT],1,GD_KT,&(TH_DBLFLT),0);
+	SETGATE(idt[T_TSS],1,GD_KT,&(TH_TSS),0);
+	SETGATE(idt[T_SEGNP],1,GD_KT,&(TH_SEGNP),0);
+	SETGATE(idt[T_STACK],1,GD_KT,&(TH_STACK),0);
+	SETGATE(idt[T_GPFLT],1,GD_KT,&(TH_GPFLT),0);
+	SETGATE(idt[T_PGFLT],1,GD_KT,&(TH_PGFLT),0);
+	SETGATE(idt[T_FPERR],1,GD_KT,&(TH_FPERR),0);
+	SETGATE(idt[T_SYSCALL],1,GD_KT,&(TH_SYSCALL),3);
 	// Per-CPU setup 
 	trap_init_percpu();
 }
@@ -145,13 +175,31 @@ trap_dispatch(struct Trapframe *tf)
 	// LAB 3: Your code here.
 
 	// Unexpected trap: The user process or the kernel has a bug.
-	print_trapframe(tf);
-	if (tf->tf_cs == GD_KT)
-		panic("unhandled trap in kernel");
-	else {
-		env_destroy(curenv);
-		return;
+	switch(tf->tf_trapno)
+	{
+		case T_PGFLT:
+			page_fault_handler(tf);
+			return;
+		case T_BRKPT:
+			monitor(tf);
+			return;
+		case T_SYSCALL:
+			;				//GG Standar, label can only be followed by statements and declaration is not a statement
+			int32_t ret = syscall(tf->tf_regs.reg_eax,tf->tf_regs.reg_edx, tf->tf_regs.reg_ecx,
+								 tf->tf_regs.reg_ebx, tf->tf_regs.reg_edi,tf->tf_regs.reg_esi);
+			tf->tf_regs.reg_eax = ret;	
+			break;
+		default:
+			print_trapframe(tf);
+			if (tf->tf_cs == GD_KT)
+				panic("unhandled trap in kernel");
+			else {
+				env_destroy(curenv);
+				return;
+			}
 	}
+	
+	
 }
 
 void
@@ -204,7 +252,10 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
-
+	if( (tf->tf_cs & 3) == 0){
+		panic("Page Fault in Kernel mode! This should never happen\n");
+	}
+	
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
 

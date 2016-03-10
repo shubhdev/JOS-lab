@@ -162,7 +162,7 @@ monitor(struct Trapframe *tf)
 
 	if (tf != NULL)
 		print_trapframe(tf);
-
+	
 	while (1) {
 		buf = readline("K> ");
 		if (buf != NULL)
