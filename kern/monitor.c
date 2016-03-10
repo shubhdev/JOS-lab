@@ -66,6 +66,7 @@ void print_stackframe(uint32_t ebp,struct StackFrame * frame){
 	cprintf("    ebp %08x  eip %08x  args:",ebp,frame->ret_addr);
 	int i;
 	for(i = 0; i < 5; i++) {
+		//cprintf("%d ->",i);
 		cprintf(" %08x",frame->param[i]);	
 	}
 	cprintf("\n");
@@ -73,6 +74,7 @@ void print_stackframe(uint32_t ebp,struct StackFrame * frame){
 void print_funcinfo(uint32_t eip){
 	struct Eipdebuginfo info;
 	uintptr_t addr = (uintptr_t)eip;
+	//cprintf("-----\n");
 	debuginfo_eip(addr,&info);
 	//kern/monitor.c:101: mon_backtrace+15
 	int offset = eip - (uint32_t)info.eip_fn_addr;
@@ -99,6 +101,7 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 		print_funcinfo(curr_eip);
 		curr_frame = (struct StackFrame *)(curr_ebp);
 		print_stackframe(curr_ebp,curr_frame);
+		//cprintf("=====\n");
 		curr_ebp = curr_frame->caller_ebp;
 		curr_eip = curr_frame->ret_addr;
 	}
