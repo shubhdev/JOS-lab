@@ -268,6 +268,12 @@ mem_init(void)
 // Pages are reference counted, and free pages are kept on a linked list.
 // --------------------------------------------------------------
 
+bool used(size_t i){
+	if(i == 0) return true;
+	if(i*PGSIZE >= IOPHYSMEM && i*PGSIZE < EXTPHYSMEM) return true;
+	if(i*PGSIZE >= EXTPHYSMEM && i*PGSIZE < PADDR(boot_alloc(0))) return true;
+	return false;
+}
 //
 // Initialize page structure and memory free list.
 // After this is done, NEVER use boot_alloc again.  ONLY use the page
@@ -301,12 +307,6 @@ page_init(void)
 		pages[i].pp_link = page_free_list;
 		page_free_list = &pages[i];
 	}
-}
-bool used(size_t i){
-	if(i == 0) return true;
-	if(i*PGSIZE >= IOPHYSMEM && i*PGSIZE < EXTPHYSMEM) return true;
-	if(i*PGSIZE >= EXTPHYSMEM && i*PGSIZE < PADDR(boot_alloc(0))) return true;
-	return false;
 }
 
 //
