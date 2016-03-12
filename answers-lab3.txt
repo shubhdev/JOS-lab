@@ -1,24 +1,33 @@
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asnkfdklafSFASFSFAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-asa
+
+1.	If all the exceptions and interrupts had a single entry point, we would not be able to easily enbale protection based on the dpl. The user program will be able to invoke any exception or interrupt which may enable malicious code to interfere with the kernel.
+
+2. The expected result of running the user/sofint program is a general protection fault, since trap14 can't be invoked explicitly by a user program. When the user code invoker trap 14, the hardware can refer to the IDT and know that its CPL bits are higher than the trap handler allows. Thus a General Protection Fault occurs, which has interrupt vector 13.
+If the kernel actually allows user to invoker Page Fault exceptions, it may lead to user exploiting the kernel by intefering with the memory management, or simply disrupt the kernel normal execution.
+
+3. In trap_init the Gate descriptor of interrupt vector 3, has its dpl as 3. Hence it can be invoked explicitly by a user program, thus causing the breakpoint exception. However, if the dpl of the gate descriptor was set INCORRECTLY as 0, a user program trying to generate a breakpoint will cause General Protection Fault, since it's CPL is higher than the gate DPL
+
+4.  The reason for protection mechanism over interrupt invokation is that, a malicious user program can try to interfere with normal functioning of the kernel, if it is allowed to invoke any interrupt/exception. This is not desired, hence only a few interrupts which cannot be used to do any harm to the kernel, and may benefit the user, such as breakpoint exception are allowed for the user to invoke.
+
+CHALLENGE EXCERCISE:
+===================
+
+I implemented the continue and single stepping functionality in the kernel monitor.
+If the TF_FLT (defined in inc/mmu.h) bit in the EFLAGS register is set, the processor causes a DEBUG exception after executing a single instruction.
+In JOS, I made the following changes:
+If the user program has a breakpoint exception or a debug exception, the trap_dispatch function invokes the monitor. The monitor on receiving the single step (si) command, sets the corresponding bit in the eflags of the trap frame (passed to it by the trap_dispatch) and the monitor then returns to trap_dispatch function. Then the environment is resumed by loading the trapframe and since the fault bit in the eflags register is set the processor executes a single instruction and then causes a debug exception which is again caught by the trap_dispatch and the monitor is invoked once again.
+The command "continue" simply unsets the Interrupt flag in the EFLAGS variable in the trap frame, so that once the environment resumes, it does not cause a debug exception and its execution continues normally.
+
+There are some checks in the code to ensure that the continue and single step commands works only if the monitor was invoker due to breakpoint/debug exception.
+
+LEARNINGS:
+===========
+In this lab I learned,
+1. The format of an ELF binary, and the significance of the various fields in the headers.
+
+2. How an user environment is set up by making a new page directory , parsing the binary and setting the trap frame. Finally the switch from Kernel to user mode is done by the iret instruction. 
+
+3. The interrupt handling mechanism, pushing of the registers onto the stack by the processor, setting up of the trap frame. I also learned how protection is enabled in the IDT, and how the IDT is set up.
+
+4. How to implement a very trivial debugger (challenge exercise). Meaning of the various bits of the EFLAGS register. Learned that processor comes with the functionality to single step.
+
+5. Learned how system calls are handled, by letting the user invoker systems calls defined in lib, which then call the kernel's syscall by invoking the T_SYSCALL interrupt, which the kernel handled by invoking the appropriate system calls.

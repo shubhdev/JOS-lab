@@ -4,8 +4,6 @@
 #include <inc/memlayout.h>
 #include <inc/trap.h>
 
-
-
 ###################################################################
 # exceptions/interrupts
 ###################################################################
@@ -40,18 +38,9 @@
 	pushl $0;							\
 	pushl $(num);							\
 	jmp _alltraps							\
-/*
-#define TRAPHANDLER_NOEC(name, num, dpl)					\
-	.globl name;							\
-	.type name, @function;						\
-	.align 2;							\
-	name:								\
-		pushl $0;							\
-		pushl $(num);							\
-		jmp _alltraps							
-*/	
 
 .text
+
 /*
  * Lab 3: Your code here for generating entry points for the different traps.
  */

@@ -31,7 +31,9 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
-	{ "backtrace", "Get the stack trace",mon_backtrace}
+	{ "backtrace", "Get the stack trace",mon_backtrace},
+	{"continue","If breakpoint, then can continue",mon_continue},
+	{"si","single step through instruction",mon_single_step}
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -109,8 +111,31 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+int check_debug_trap(struct Trapframe *tf){
+	if(!tf) {
+		cprintf("Cannot continue.No trapframe found! This suggests did not reach here because of a breakpoint\n");
+		return 0;
+	}
+	if(tf->tf_trapno != T_BRKPT && tf->tf_trapno != T_DEBUG){
+		cprintf("Cannot continue, did not reach here via a breakpoint/debug trap!\n");
+		return 0;
+	}
+	return 1;
+}
+int mon_continue(int argc, char **argv, struct Trapframe *tf){
 
+	if(!check_debug_trap(tf)) return 0;
+	//change the eflags register
 
+	tf->tf_eflags &= ~FL_TF;
+	//return -1 so loop breaks;
+	return -1;
+}
+int mon_single_step(int argc, char **argv, struct Trapframe *tf){
+	if(!check_debug_trap(tf)) return 0;
+	tf->tf_eflags |= FL_TF;
+	return -1;
+}
 /***** Kernel monitor command interpreter *****/
 
 #define WHITESPACE "\t\r\n "

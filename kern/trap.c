@@ -182,7 +182,10 @@ trap_dispatch(struct Trapframe *tf)
 			return;
 		case T_BRKPT:
 			monitor(tf);
-			return;
+			break;
+		case T_DEBUG:
+			monitor(tf);
+			break;
 		case T_SYSCALL:
 			;				//GG Standar, label can only be followed by statements and declaration is not a statement
 			int32_t ret = syscall(tf->tf_regs.reg_eax,tf->tf_regs.reg_edx, tf->tf_regs.reg_ecx,
