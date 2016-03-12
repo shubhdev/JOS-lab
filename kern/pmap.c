@@ -597,9 +597,10 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 	curr_va = ROUNDDOWN(curr_va,PGSIZE);
 	const void *end_va = ROUNDUP(va+len,PGSIZE);
 	int can_access = 1;
+	pte_t *pt;
 	for(; curr_va < end_va; curr_va += PGSIZE, i++){
 		//cprintf("va: %d\n\n",curr_va);
-		if( (uintptr_t)curr_va >= ULIM || (*pgdir_walk(env->env_pgdir,curr_va,0) & perm) == 0) {
+		if( (uintptr_t)curr_va >= ULIM || (pt = pgdir_walk(env->env_pgdir,curr_va,0)) == 0 || (*pt & perm) == 0) {
 			can_access = 0;
 			if(i == 0) user_mem_check_addr = (uintptr_t)va;
 			else user_mem_check_addr = (uintptr_t)curr_va;

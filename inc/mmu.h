@@ -312,6 +312,12 @@ struct Pseudodesc {
 	uint32_t pd_base;		// Base address
 } __attribute__ ((packed));
 
+#else
+#define CREATE_TRAP_GATE(name, sel, off, dpl)	\
+	name:												\
+		.word ((off) & 0xffff), (sel);					\
+		.byte 0, (0x80 | (0 | STS_TG32));		\
+		.word (off)>>16			
 #endif /* !__ASSEMBLER__ */
 
 #endif /* !JOS_INC_MMU_H */
