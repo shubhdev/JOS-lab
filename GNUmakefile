@@ -277,7 +277,7 @@ handin-check:
 
 #	git archive --format=tar HEAD | gzip > lab$(LAB)-handin.tar.gz
 tarball: handin-check
-	tar -zcf lab$(LAB)-handin.tar.gz kern/env.c kern/init.c kern/kdebug.c kern/pmap.c kern/syscall.c kern/trapentry.S kern/trap.c lib/libmain.c kern/monitor.h kern/monitor.c answers-lab3.txt
+	tar -zcf lab$(LAB)-handin.tar.gz kern/env.c kern/init.c kern/kdebug.c kern/pmap.c kern/sched.c kern/syscall.c kern/trap.c kern/trap.h kern/trapentry.S lib/fork.c lib/ipc.c lib/libmain.c lib/pfentry.S lib/pgfault.c answers-lab4.txt inc/COPYRIGHT
 	base64 lab$(LAB)-handin.tar.gz > lab$(LAB)-handin.tar.gz.b64
 	rm -f lab$(LAB)-handin.tar.gz
 
