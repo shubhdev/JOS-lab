@@ -63,6 +63,10 @@ QEMU := $(shell if which qemu > /dev/null; \
 	echo "***" 1>&2; exit 1)
 endif
 
+QEMUGDB = $(shell if $(QEMU) -nographic -help | grep -q '^-gdb'; \
+	then echo "-gdb tcp::$(GDBPORT)"; \
+	else echo "-s -p $(GDBPORT)"; fi)
+
 # try to generate a unique GDB port
 GDBPORT	:= $(shell expr `id -u` % 5000 + 25000)
 
@@ -83,7 +87,7 @@ PERL	:= perl
 # Compiler flags
 # -fno-builtin is required to avoid refs to undefined functions in the kernel.
 # Only optimize to -O1 to discourage inlining, which complicates backtraces.
-CFLAGS := $(CFLAGS) $(DEFS) $(LABDEFS) -O1 -fno-builtin -I$(TOP) -MD
+CFLAGS := $(CFLAGS) $(DEFS) $(LABDEFS) -O0 -fno-builtin -I$(TOP) -MD
 CFLAGS += -fno-omit-frame-pointer
 CFLAGS += -Wall -Wno-format -Wno-unused -Werror -gstabs -m32
 # -fno-tree-ch prevented gcc from sometimes reordering read_ebp() before
@@ -181,6 +185,8 @@ print-qemu:
 
 print-gdbport:
 	@echo $(GDBPORT)
+print-qemugdb:
+	@echo $(QEMUGDB)
 
 # For deleting the build
 clean:
@@ -199,11 +205,20 @@ ifneq ($(V),@)
 GRADEFLAGS += -v
 endif
 
-grade:
+
+grade: $(LABSETUP)grade-lab$(LAB).sh
 	@echo $(MAKE) clean
 	@$(MAKE) clean || \
 	  (echo "'make clean' failed.  HINT: Do you have another running instance of JOS?" && exit 1)
-	./grade-lab$(LAB) $(GRADEFLAGS)
+	$(MAKE) all
+	sh $(LABSETUP)grade-lab$(LAB).sh
+
+
+#grade:
+#	@echo $(MAKE) clean
+#	@$(MAKE) clean || \
+#	  (echo "'make clean' failed.  HINT: Do you have another running instance of JOS?" && exit 1)
+#	./grade-lab$(LAB) $(GRADEFLAGS)
 
 git-handin: handin-check
 	@if test -n "`git config remote.handin.url`"; then \
@@ -238,6 +253,11 @@ handin-check:
 		echo No .git directory, is this a git repository?; \
 		false; \
 	fi
+	@if ! test -f answers-lab$(LAB).txt; then \
+		echo file answers-lab$(LAB).txt does not exist; \
+		false; \
+	fi
+
 	@if test "$$(git symbolic-ref HEAD)" != refs/heads/lab$(LAB); then \
 		git branch; \
 		read -p "You are not on the lab$(LAB) branch.  Hand-in the current branch? [y/N] " r; \
@@ -255,8 +275,11 @@ handin-check:
 		test "$$r" = y; \
 	fi
 
+#	git archive --format=tar HEAD | gzip > lab$(LAB)-handin.tar.gz
 tarball: handin-check
-	git archive --format=tar HEAD | gzip > lab$(LAB)-handin.tar.gz
+	tar -zcf lab$(LAB)-handin.tar.gz kern/env.c kern/init.c kern/kdebug.c kern/pmap.c kern/syscall.c kern/trapentry.S kern/trap.c lib/libmain.c kern/monitor.h kern/monitor.c answers-lab3.txt
+	base64 lab$(LAB)-handin.tar.gz > lab$(LAB)-handin.tar.gz.b64
+	rm -f lab$(LAB)-handin.tar.gz
 
 tarball-pref: handin-check
 	@SUF=$(LAB); \
