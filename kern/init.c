@@ -96,6 +96,8 @@ boot_aps(void)
 		while(c->cpu_status != CPU_STARTED)
 			;
 	}
+	cprintf("boot_aps end!\n");
+
 }
 
 // Setup code for APs
