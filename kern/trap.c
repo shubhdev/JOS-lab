@@ -231,7 +231,7 @@ trap_dispatch(struct Trapframe *tf)
 			monitor(tf);
 			break;
 		case T_SYSCALL:
-			;				//GG Standar, label can only be followed by statements and declaration is not a statement
+			;				//GG Standard, label can only be followed by statements and declaration is not a statement
 			int32_t ret = syscall(tf->tf_regs.reg_eax,tf->tf_regs.reg_edx, tf->tf_regs.reg_ecx,
 								 tf->tf_regs.reg_ebx, tf->tf_regs.reg_edi,tf->tf_regs.reg_esi);
 			tf->tf_regs.reg_eax = ret;	
@@ -322,6 +322,7 @@ page_fault_handler(struct Trapframe *tf)
 
 	// LAB 3: Your code here.
 	if( (tf->tf_cs & 3) == 0){
+		print_trapframe(tf);
 		panic("Page Fault in Kernel mode! This should never happen\n");
 	}
 	

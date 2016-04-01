@@ -504,7 +504,7 @@ env_destroy(struct Env *e)
 
 	if (curenv == e) {
 		curenv = NULL;
-		//cprintf("Imma destroyed, calling yield\n");
+		cprintf("Imma destroyed, calling yield\n");
 		sched_yield();
 	}
 }
@@ -559,6 +559,7 @@ env_run(struct Env *e)
 	//	e->env_tf to sensible values.
 
 	// LAB 3: Your code here.
+	assert(e);
 	if(curenv && curenv->env_status == ENV_RUNNING) curenv->env_status = ENV_RUNNABLE;
 	curenv = e;
 	curenv->env_status = ENV_RUNNING;
