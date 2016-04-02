@@ -54,6 +54,20 @@ duppage(envid_t envid, unsigned pn)
 	int r;
 
 	// LAB 4: Your code here.
+	extern char *uvpd[];
+	void *addr = (void *)(pn*PGSIZE);
+	if((uvpt[pn] & PTE_W) || (uvpt[pn] & PTE_COW)){
+		r = sys_page_map(0,addr,envid,addr,PTE_U|PTE_P|PTE_COW);
+		if(r < 0) return r;
+		r = sys_page_map(0,addr,0,addr,PTE_U|PTE_P|PTE_COW);
+		if(r < 0) return r;
+	}
+	else{
+		r = sys_page_map(0,addr,envid,addr,PTE_U|PTE_P);
+		if(r < 0)
+			return r;
+	}
+	return 0;
 	panic("duppage not implemented");
 	return 0;
 }
@@ -74,11 +88,41 @@ duppage(envid_t envid, unsigned pn)
 //   Neither user exception stack should ever be marked copy-on-write,
 //   so you must allocate a new page for the child's user exception stack.
 //
+extern void _pgfault_upcall(void);
 envid_t
 fork(void)
 {
 	// LAB 4: Your code here.
-	panic("fork not implemented");
+	int r;
+	set_pgfault_handler(pgfault);
+	envid_t id = sys_exo_fork();
+	if(id < 0)
+		return id;
+	if(id == 0){
+		// in child
+		thisenv = &envs[ENVX(sys_getenvid())];
+		return 0;
+	}
+
+	int pgn;
+	for(pgn = 0 ; pgn*PGSIZE < USTACKTOP ; pgn++){
+		// check that the page is present (else sys_page_map has an error) and is user accessible
+		void *addr = (void *)pgn*PGSIZE;
+		if( (uvpd[PDX(addr)] & p) && (uvpt[pgn] & PTE_P) && (uvpt[pgn] & PTE_U)){
+			duppage(id,pn);
+		}
+	}
+
+	if( (r = sys_page_alloc(id,(void *)(UXSTACKTOP - PGSIZE),PTE_U|PTE_P|PTE_W)) < 0)
+		return r;
+
+	if( (r = sys_set_pgfault_upcall(id,_pgfault_upcall)) < 0)
+		return r;
+	if( (r = sys_env_set_status(id,ENV_RUNNABLE)) < 0)
+		return r;
+	
+	return id;
+	//panic("fork not implemented");
 }
 
 // Challenge!
