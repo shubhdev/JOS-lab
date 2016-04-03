@@ -25,6 +25,9 @@ pgfault(struct UTrapframe *utf)
 	//   (see <inc/memlayout.h>).
 
 	// LAB 4: Your code here.
+	if(!(err & FEC_WR) || !(uvpt[PGNUM(addr)] & PTE_COW)){
+		panic("PGFLT not COW\n");
+	}
 
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
@@ -33,8 +36,21 @@ pgfault(struct UTrapframe *utf)
 	//   You should make three system calls.
 
 	// LAB 4: Your code here.
+	r = sys_page_alloc(0,PFTEMP,PTE_P|PTE_U|PTE_W);
+	if(r < 0){
+		panic("sys_page_alloc : %e",r);
+	}
+	memmove((void *)PFTEMP,ROUNDDOWN(addr,PGSIZE),PGSIZE);
+	r = sys_page_map(0,(void *)PFTEMP,0,ROUNDDOWN(addr,PGSIZE),PTE_P|PTE_U|PTE_W);
+	if(r < 0){
 
-	panic("pgfault not implemented");
+		panic("syes_page_map : %e\n",r);
+	}
+	r = sys_page_unmap(0,(void *)PFTEMP);
+	if(r < 0){
+		panic("sys_page_unmap : %e\n",r);
+	}
+	//panic("pgfault not implemented");
 }
 
 //
@@ -54,7 +70,6 @@ duppage(envid_t envid, unsigned pn)
 	int r;
 
 	// LAB 4: Your code here.
-	extern char *uvpd[];
 	void *addr = (void *)(pn*PGSIZE);
 	if((uvpt[pn] & PTE_W) || (uvpt[pn] & PTE_COW)){
 		r = sys_page_map(0,addr,envid,addr,PTE_U|PTE_P|PTE_COW);
@@ -95,7 +110,7 @@ fork(void)
 	// LAB 4: Your code here.
 	int r;
 	set_pgfault_handler(pgfault);
-	envid_t id = sys_exo_fork();
+	envid_t id = sys_exofork();
 	if(id < 0)
 		return id;
 	if(id == 0){
@@ -107,16 +122,16 @@ fork(void)
 	int pgn;
 	for(pgn = 0 ; pgn*PGSIZE < USTACKTOP ; pgn++){
 		// check that the page is present (else sys_page_map has an error) and is user accessible
-		void *addr = (void *)pgn*PGSIZE;
-		if( (uvpd[PDX(addr)] & p) && (uvpt[pgn] & PTE_P) && (uvpt[pgn] & PTE_U)){
-			duppage(id,pn);
+		void *addr = (void *)(pgn*PGSIZE);
+		if( (uvpd[PDX(addr)] & PTE_P) && (uvpt[pgn] & PTE_P) && (uvpt[pgn] & PTE_U)){
+			duppage(id,pgn);
 		}
 	}
 
 	if( (r = sys_page_alloc(id,(void *)(UXSTACKTOP - PGSIZE),PTE_U|PTE_P|PTE_W)) < 0)
 		return r;
 
-	if( (r = sys_set_pgfault_upcall(id,_pgfault_upcall)) < 0)
+	if( (r = sys_env_set_pgfault_upcall(id,_pgfault_upcall)) < 0)
 		return r;
 	if( (r = sys_env_set_status(id,ENV_RUNNABLE)) < 0)
 		return r;

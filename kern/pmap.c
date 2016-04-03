@@ -670,27 +670,46 @@ static uintptr_t user_mem_check_addr;
 // Returns 0 if the user program can access this range of addresses,
 // and -E_FAULT otherwise.
 //
+// int
+// user_mem_check(struct Env *env, const void *va, size_t len, int perm)
+// {
+// 	// LAB 3: Your code here.
+// 	const void *curr_va = va;
+// 	int i = 0;
+// 	curr_va = ROUNDDOWN(curr_va,PGSIZE);
+// 	const void *end_va = ROUNDUP(va+len,PGSIZE);
+// 	int can_access = 1;
+// 	pte_t *pt;
+// 	for(; curr_va < end_va; curr_va += PGSIZE, i++){
+// 		//cprintf("va: %d\n\n",curr_va);
+// 		if( (uintptr_t)curr_va >= ULIM || (pt = pgdir_walk(env->env_pgdir,curr_va,0)) == 0 || (*pt & perm) == 0) {
+// 			can_access = 0;
+// 			if(i == 0) user_mem_check_addr = (uintptr_t)va;
+// 			else user_mem_check_addr = (uintptr_t)curr_va;
+// 			break;
+// 		}
+// 	}
+// 	if(!can_access) return -E_FAULT;
+// 	else return 0;
+// }
 int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
 	// LAB 3: Your code here.
-	const void *curr_va = va;
-	int i = 0;
-	curr_va = ROUNDDOWN(curr_va,PGSIZE);
-	const void *end_va = ROUNDUP(va+len,PGSIZE);
-	int can_access = 1;
-	pte_t *pt;
-	for(; curr_va < end_va; curr_va += PGSIZE, i++){
-		//cprintf("va: %d\n\n",curr_va);
-		if( (uintptr_t)curr_va >= ULIM || (pt = pgdir_walk(env->env_pgdir,curr_va,0)) == 0 || (*pt & perm) == 0) {
-			can_access = 0;
-			if(i == 0) user_mem_check_addr = (uintptr_t)va;
-			else user_mem_check_addr = (uintptr_t)curr_va;
-			break;
+	// cprintf("user_mem_check va: %x, len: %x\n", va, len);
+	uint32_t begin = (uint32_t) ROUNDDOWN(va, PGSIZE); 
+	uint32_t end = (uint32_t) ROUNDUP(va+len, PGSIZE);
+	uint32_t i;
+	for (i = (uint32_t)begin; i < end; i+=PGSIZE) {
+		pte_t *pte = pgdir_walk(env->env_pgdir, (void*)i, 0);
+		// pprint(pte);
+		if ((i>=ULIM) || !pte || !(*pte & PTE_P) || ((*pte & perm) != perm)) {
+			user_mem_check_addr = (i<(uint32_t)va?(uint32_t)va:i);
+			return -E_FAULT;
 		}
 	}
-	if(!can_access) return -E_FAULT;
-	else return 0;
+	// cprintf("user_mem_check success va: %x, len: %x\n", va, len);
+	return 0;
 }
 
 //

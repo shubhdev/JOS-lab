@@ -368,8 +368,6 @@ page_fault_handler(struct Trapframe *tf)
 	}
 	else{
 
-		//check page allocation for stack and permissions
-		user_mem_assert(curenv,(void *)(UXSTACKTOP - PGSIZE),PGSIZE,PTE_U|PTE_P|PTE_W);
 		
 		uint32_t esp = tf->tf_esp;
 		struct UTrapframe *uxstacktop;
@@ -380,33 +378,28 @@ page_fault_handler(struct Trapframe *tf)
 		else{
 			uxstacktop = (struct UTrapframe *)UXSTACKTOP; // top memory location, first time in stack
 		}
+		
+		uxstacktop--;		// make space the the struct
+		
 		uintptr_t top = (uintptr_t)uxstacktop;
-
-		// check if enough space on stack to push User trapframe
-		if(top - (UXSTACKTOP - PGSIZE) < sizeof(struct UTrapframe)){
-
-			cprintf("User Exception Stack Overflow!\n");
-			print_trapframe(tf);
-			env_destroy(curenv);
-		}
-		else{
-			struct UTrapframe utf;
-			utf.utf_esp = tf->tf_esp;
-			utf.utf_eflags = tf->tf_eflags;
-			utf.utf_eip = tf->tf_eip;
-			utf.utf_regs = tf->tf_regs;
-			utf.utf_err = tf->tf_err;
-			utf.utf_fault_va = fault_va;
-			// make space for this struct
-			uxstacktop--;
-			//copy the struct
-			*uxstacktop = utf;
-			// now we are going to return to user, set up the tf so that user start operating on exception stack
-			// and inside the pgfault handler
-			tf->tf_eip = (uintptr_t)curenv->env_pgfault_upcall;
-			tf->tf_esp = (uintptr_t)uxstacktop;
-			env_run(curenv);
-		}
+		
+		//check page allocation for stack and permissions
+		user_mem_assert(curenv,(void *)top,sizeof(struct UTrapframe),PTE_U|PTE_P|PTE_W);
+		struct UTrapframe utf;
+		utf.utf_esp = tf->tf_esp;
+		utf.utf_eflags = tf->tf_eflags;
+		utf.utf_eip = tf->tf_eip;
+		utf.utf_regs = tf->tf_regs;
+		utf.utf_err = tf->tf_err;
+		utf.utf_fault_va = fault_va;
+		//copy the struct
+		*uxstacktop = utf;
+		// now we are going to return to user, set up the tf so that user start operating on exception stack
+		// and inside the pgfault handler
+		tf->tf_eip = (uintptr_t)curenv->env_pgfault_upcall;
+		tf->tf_esp = (uintptr_t)uxstacktop;
+		env_run(curenv);
+		
 	}
 }
 

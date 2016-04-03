@@ -78,7 +78,7 @@ sys_yield(void)
 static envid_t
 sys_exofork(void)
 {
-	cprintf("FORK called by %08x!\n",curenv->env_id);
+	//cprintf("FORK called by %08x!\n",curenv->env_id);
 	// Create the new environment with env_alloc(), from kern/env.c.
 	// It should be left as env_alloc created it, except that
 	// status is set to ENV_NOT_RUNNABLE, and the register set is copied
@@ -252,13 +252,26 @@ sys_page_map(envid_t srcenvid, void *srcva,
 		return -E_INVAL;
 	pte_t *pte;
 	struct PageInfo *pp = page_lookup(srcenv->env_pgdir,srcva,&pte);
-	if(!pp) return -E_INVAL;
-	if(!valid_perm(perm)) return -E_INVAL;
+	if(!pp){
+	cprintf("adadadadas\n");
+		
+		return -E_INVAL;
+	}
+	if(!valid_perm(perm)) {
+	cprintf("adadadadas\n");
+		return -E_INVAL;
+	}
+	if( !(*pte & PTE_U) && (perm & PTE_W) > 0){
+	cprintf("adadadadas\n");
 
-	if( !(*pte & PTE_U) && (perm & PTE_W) > 0) return -E_INVAL;
-	
+		return -E_INVAL;
+	}
 	// insert page into dest page table
-	if((r = page_insert(dstenv->env_pgdir,pp,dstva,perm)) < 0) return r;
+	if((r = page_insert(dstenv->env_pgdir,pp,dstva,perm)) < 0){
+	cprintf("adadadadas\n");
+		
+		return r;
+	}
 	return 0;
 	//panic("sys_page_map not implemented");
 }
