@@ -25,8 +25,11 @@ pgfault(struct UTrapframe *utf)
 	//   (see <inc/memlayout.h>).
 
 	// LAB 4: Your code here.
-	if(!(err & FEC_WR) || !(uvpt[PGNUM(addr)] & PTE_COW)){
-		panic("PGFLT not COW\n");
+	if(!(err & FEC_WR)){
+		panic("PGFLT not W%d\n",err);
+	}
+	if(!(uvpt[PGNUM(addr)] & PTE_COW)){
+		panic("not COW\n");
 	}
 
 	// Allocate a new page, map it at a temporary location (PFTEMP),
@@ -68,7 +71,6 @@ static int
 duppage(envid_t envid, unsigned pn)
 {
 	int r;
-
 	// LAB 4: Your code here.
 	void *addr = (void *)(pn*PGSIZE);
 	if((uvpt[pn] & PTE_W) || (uvpt[pn] & PTE_COW)){

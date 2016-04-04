@@ -46,6 +46,13 @@ void TH_GPFLT();
 void TH_PGFLT();
 void TH_FPERR();
 void TH_SYSCALL();
+void I_TIMER();
+void I_KBD();
+void I_SERIAL();
+void I_SPURIOUS();
+void I_IDE();
+void I_ERROR();
+
 static const char *trapname(int trapno)
 {
 	static const char * const excnames[] = {
@@ -87,22 +94,30 @@ trap_init(void)
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
-	SETGATE(idt[T_DIVIDE],1,GD_KT,&(TH_DIVIDE),0);
-	SETGATE(idt[T_DEBUG],1,GD_KT,&(TH_DEBUG),0);
-	SETGATE(idt[T_NMI],1,GD_KT,&(TH_NMI),0);
-	SETGATE(idt[T_BRKPT],1,GD_KT,&(TH_BRKPT),3);
-	SETGATE(idt[T_OFLOW],1,GD_KT,&(TH_OFLOW),0);
-	SETGATE(idt[T_BOUND],1,GD_KT,&(TH_BOUND),0);
-	SETGATE(idt[T_ILLOP],1,GD_KT,&(TH_ILLOP),0);
-	SETGATE(idt[T_DEVICE],1,GD_KT,&(TH_DEVICE),0);
-	SETGATE(idt[T_DBLFLT],1,GD_KT,&(TH_DBLFLT),0);
-	SETGATE(idt[T_TSS],1,GD_KT,&(TH_TSS),0);
-	SETGATE(idt[T_SEGNP],1,GD_KT,&(TH_SEGNP),0);
-	SETGATE(idt[T_STACK],1,GD_KT,&(TH_STACK),0);
-	SETGATE(idt[T_GPFLT],1,GD_KT,&(TH_GPFLT),0);
-	SETGATE(idt[T_PGFLT],1,GD_KT,&(TH_PGFLT),0);
-	SETGATE(idt[T_FPERR],1,GD_KT,&(TH_FPERR),0);
-	SETGATE(idt[T_SYSCALL],1,GD_KT,&(TH_SYSCALL),3);
+	SETGATE(idt[T_DIVIDE],0,GD_KT,&(TH_DIVIDE),0);
+	SETGATE(idt[T_DEBUG],0,GD_KT,&(TH_DEBUG),0);
+	SETGATE(idt[T_NMI],0,GD_KT,&(TH_NMI),0);
+	SETGATE(idt[T_BRKPT],0,GD_KT,&(TH_BRKPT),3);
+	SETGATE(idt[T_OFLOW],0,GD_KT,&(TH_OFLOW),0);
+	SETGATE(idt[T_BOUND],0,GD_KT,&(TH_BOUND),0);
+	SETGATE(idt[T_ILLOP],0,GD_KT,&(TH_ILLOP),0);
+	SETGATE(idt[T_DEVICE],0,GD_KT,&(TH_DEVICE),0);
+	SETGATE(idt[T_DBLFLT],0,GD_KT,&(TH_DBLFLT),0);
+	SETGATE(idt[T_TSS],0,GD_KT,&(TH_TSS),0);
+	SETGATE(idt[T_SEGNP],0,GD_KT,&(TH_SEGNP),0);
+	SETGATE(idt[T_STACK],0,GD_KT,&(TH_STACK),0);
+	SETGATE(idt[T_GPFLT],0,GD_KT,&(TH_GPFLT),0);
+	SETGATE(idt[T_PGFLT],0,GD_KT,&(TH_PGFLT),0);
+	SETGATE(idt[T_FPERR],0,GD_KT,&(TH_FPERR),0);
+	SETGATE(idt[T_SYSCALL],0,GD_KT,&(TH_SYSCALL),3);
+
+
+	SETGATE(idt[IRQ_TIMER + IRQ_OFFSET],0,GD_KT,&(I_TIMER),0);
+	SETGATE(idt[IRQ_KBD + IRQ_OFFSET],0,GD_KT,&(I_KBD),0);
+	SETGATE(idt[IRQ_SERIAL + IRQ_OFFSET],0,GD_KT,&(I_SERIAL),0);
+	SETGATE(idt[IRQ_SPURIOUS + IRQ_OFFSET],0,GD_KT,&(I_SPURIOUS),0);
+	SETGATE(idt[IRQ_IDE + IRQ_OFFSET],0,GD_KT,&(I_IDE),0);
+	SETGATE(idt[IRQ_ERROR + IRQ_OFFSET],0,GD_KT,&(I_ERROR),0);
 	// Per-CPU setup 
 	trap_init_percpu();
 }
@@ -235,7 +250,11 @@ trap_dispatch(struct Trapframe *tf)
 			int32_t ret = syscall(tf->tf_regs.reg_eax,tf->tf_regs.reg_edx, tf->tf_regs.reg_ecx,
 								 tf->tf_regs.reg_ebx, tf->tf_regs.reg_edi,tf->tf_regs.reg_esi);
 			tf->tf_regs.reg_eax = ret;	
-			break;
+			return;
+		case IRQ_OFFSET+IRQ_TIMER :
+			lapic_eoi();
+			sched_yield();
+			return;
 		default:
 			print_trapframe(tf);
 			if (tf->tf_cs == GD_KT)
@@ -254,6 +273,7 @@ trap(struct Trapframe *tf)
 {
 	// The environment may have set DF and some versions
 	// of GCC rely on DF being clear
+
 	asm volatile("cld" ::: "cc");
 
 	// Halt the CPU if some other CPU has called panic()
@@ -265,9 +285,11 @@ trap(struct Trapframe *tf)
 	// sched_yield()
 	if (xchg(&thiscpu->cpu_status, CPU_STARTED) == CPU_HALTED)
 		lock_kernel();
+	
 	// Check that interrupts are disabled.  If this assertion
 	// fails, DO NOT be tempted to fix it by inserting a "cli" in
 	// the interrupt path.
+	
 	assert(!(read_eflags() & FL_IF));
 
 	if ((tf->tf_cs & 3) == 3) {
