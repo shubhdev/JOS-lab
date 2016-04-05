@@ -1,0 +1,32 @@
+EXCERCISES
+=================
+
+Ans 1
+mpentry.S uses MPBOOTPHYS to calculate absolute addresses of its symbols, rather than relying on the linker to fill them.
+This is because, the code is run from MPENTRY_PADDR , which is different from its link address. Hence the linker will not fill in correct addresses of the symbols, and hence we use MPBOOTPHYS to calculate that. It simply calculates the offset of a symbol from the start (which is fixed) and adds it to MPENTRY_PADDR (where the code is copied) to get the correct absolute address of that symbol.
+
+
+Ans2
+
+Consider 2 processes on different CPUs. Suppose process1 and process2 both make a system call, and hence their trapframes are pushed onto the kernel stack. Some values are pushed by the hardware onto the stack. Hence there is a race condition, with a shared kernel stack. 
+Even if the race condition is ignored,suppose trapframe of process1 is pushed after the trapframe of process2 has been pushed. However, it is possible that CPU1 acquires the kernel lock before CPU2 and hence when process1 resumes, its state will be restored from the trapframe of process2, which is not correct behaviour.
+
+Ans3
+
+The virtual address of 'e' belongs to kernel address space, as it is the address of an element of the 'envs' array, which is in kernel space.
+Since address spaces of all environments, have the kernel address space same as the kernel page directory, address of 'e' is same in all page directories,allowing pointer 'e' to be dereferenced even after switching the address context.
+
+Ans4
+
+Kernel needs to save the envorionment's state (including its registers) so that the environment can be resumed from the exact state it was in.
+This happens when an interrupt occurs. The code can be found in trapentry.S where we pushed registers onto the stack, which are then saved in trap() function in trap.c to the environment's trapframe variable.
+
+
+
+Learnings
+=============
+
+1. Implementing fork, as well as copy on write mappings
+2. Implementing user mode page fault handlers, and user exception stack
+3. Learnt about a possible implementation of the inter process communication, and how blocking sends and recieves might be implemented.
+4. Also implemented scheduling between multiple environments.
