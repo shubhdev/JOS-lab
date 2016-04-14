@@ -17,16 +17,18 @@ umain(int argc, char **argv)
 	int i;
 	int inp = strtol(argv[1],NULL,10);
 	int inp1 = inp;
-	// while(buf[i]!= '\0')
-	// {
-	// 	inp = inp*10 + int(buf[i])-48;
-	// }
-	long long int fact = 1;
-	while(inp!=0)
+	long long int fib1=1 , fib2 =1;
+	if(inp==1 || inp == 2)
 	{
-		fact = fact*inp;
-		inp--;			
+		cprintf("Fibonacci(%d) : %d\n" ,inp1 , 1);
+		return;
 	}
-	cprintf("Factorial(%d) : %d\n" ,inp1 , fact);
+	for(i=2;i<inp;i++)
+	{
+		long long int temp = fib2;
+		fib2 = fib2 + fib1;
+		fib1 = temp;
+	}
+	cprintf("Fibonacci(%d) : %d\n" ,inp1 , fib2);
 	
 }

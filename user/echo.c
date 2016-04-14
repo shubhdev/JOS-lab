@@ -11,4 +11,5 @@ void umain(int argc , char** argv)
 		cprintf(argv[i]);
 		cprintf(" ");
 	}
+	cprintf("\n");
 }

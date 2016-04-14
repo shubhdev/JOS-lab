@@ -406,6 +406,22 @@ uint8_t * get_binary(const char *name){
 		SET_ENV_BINARY(user_factorial,binary);
 		return binary;	
 	}
+	if(strcmp(name,"fib") == 0){
+		SET_ENV_BINARY(user_fibonacci,binary);
+		return binary;	
+	}
+	if(strcmp(name,"echo") == 0){
+		SET_ENV_BINARY(user_echo,binary);
+		return binary;	
+	}
+	if(strcmp(name,"date") == 0){
+		SET_ENV_BINARY(user_date,binary);
+		return binary;	
+	}
+	if(strcmp(name,"cal") == 0){
+		SET_ENV_BINARY(user_cal,binary);
+		return binary;	
+	}
 	return 0;	
 	// case 2:
 	// 		SET_ENV_BINARY(user_cal,binary);

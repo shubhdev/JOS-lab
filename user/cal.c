@@ -122,14 +122,14 @@ void umain(int argc , char** argv) {
 
     // year = atoi(argv[1]);
     // could check whether input is valid here
-    year = argc;
+    year = 0;
 
     startingDay = get_week_day(1, 1, year);
 
     int months[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 
-     if(argc == 0)
+     if(argc == 1)
     {
 
     	struct rtcdate r;
@@ -162,6 +162,8 @@ void umain(int argc , char** argv) {
         return;
     	
     }
+
+    year = strtol(argv[1],NULL,10);
 
     if (year % 400 == 0 || (year % 4 == 0 && year % 100 != 0))
        months[1] = 29;
