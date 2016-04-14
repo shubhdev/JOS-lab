@@ -122,9 +122,8 @@ void umain(int argc , char** argv) {
 
     // year = atoi(argv[1]);
     // could check whether input is valid here
-    year = 0;
+    //year = 0;
 
-    startingDay = get_week_day(1, 1, year);
 
     int months[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
@@ -132,11 +131,11 @@ void umain(int argc , char** argv) {
      if(argc == 1)
     {
 
-    	struct rtcdate r;
-    	cmostime(&r);
-    	int daysInMonth = months[r.month-1];
-    	int dayOfWeek, date;
-    	year = r.year;
+      struct rtcdate r;
+      cmostime(&r);
+      int daysInMonth = months[r.month-1];
+      int dayOfWeek, date;
+      year = r.year;
       startingDay = get_week_day(1, r.month, r.year);
       cprintf("%d\n",r.year);
       // cprintf("%d\n",r.month);
@@ -160,11 +159,12 @@ void umain(int argc , char** argv) {
         if (dayOfWeek != 0)
             cprintf("\n");
         return;
-    	
+      
     }
 
     year = strtol(argv[1],NULL,10);
-
+    startingDay = get_week_day(1, 1, year);
+    cprintf("%d\n",year);
     if (year % 400 == 0 || (year % 4 == 0 && year % 100 != 0))
        months[1] = 29;
 
