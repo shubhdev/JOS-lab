@@ -400,6 +400,7 @@ sys_ipc_recv(void *dstva)
 }
 uint8_t * get_binary(const char *name){
 	uint8_t *binary;
+	//cprintf("~~%s\n",name);
 	//switch(util_id){
 	if(strcmp(name,"fac") == 0){
 		SET_ENV_BINARY(user_factorial,binary);
@@ -417,11 +418,16 @@ uint8_t * get_binary(const char *name){
 	// }
 	//return binary;
 }
-static char argv_copy[1024];
 #define MAXLEN 1024
-
+#define MAXARGS 10
+static char argv_copy[MAXLEN];
 // does not return unless an error
 static int sys_exec(int argc, char *argv){
+	if(!argv || argc <= 0)
+		return -1;
+	// TODO: add user mem assert to check that we can access argv till 1024
+	// without entering kernel space
+
 	envid_t parent_id = curenv->env_parent_id;
 	envid_t own_id = curenv->env_id;
 	assert(argv);
@@ -431,7 +437,7 @@ static int sys_exec(int argc, char *argv){
 	env_free(curenv);
 	
 	struct Env* e;
-	uint8_t *bin = get_binary(argv);
+	uint8_t *bin = get_binary(argv_copy);
 	if(!bin)
 		return -E_INVAL;
 	int ret;
@@ -440,14 +446,37 @@ static int sys_exec(int argc, char *argv){
 	e->env_id = own_id; 
 	load_icode(e,bin);
 	e->env_type = ENV_TYPE_USER;
-	uint32_t *ustack = (uint32_t *)USTACKTOP;
+	//cprintf("@@@@%s\n",argv_copy+4);
+	// push argc and argv on the stack
+
+	char *ustack = (char *)USTACKTOP;
 	lcr3(PADDR(e->env_pgdir));
-	ustack -= 2;
-	ustack[0] = arg;
-	ustack[1] = 0;
 	
+	int arg_offset[MAXARGS];
+	int i = 0;
+	int total_len = 0;
+	char *arg = argv_copy;
+	//cprintf("%s\n",argv_copy);
+	while(i != argc){
+		arg_offset[i] = total_len;
+		int len = strlen(arg) + 1;	// including the null char
+		total_len += len;
+		arg += len;
+		i++;
+	}
+	ustack -= total_len;
+	memcpy(ustack,argv_copy,total_len*sizeof(char));
+	//cprintf("^^^%s\n",ustack);
+	uint32_t* ustacki = (uint32_t*)ustack;
+	ustacki -= argc;
+	for(i = 0; i < argc; i++){
+		ustacki[i] = USTACKTOP - (total_len - arg_offset[i]);
+	}
+	ustacki -= 2;
+	ustacki[0] = argc;
+	ustacki[1] = (uintptr_t)(ustacki+2);
 	lcr3(PADDR(kern_pgdir));
-	e->env_tf.tf_esp = (uintptr_t)ustack;
+	e->env_tf.tf_esp = (uintptr_t)ustacki;
 	env_run(e);
 }
 // Dispatches to the correct kernel function, passing the arguments.
@@ -490,7 +519,7 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		case SYS_ipc_try_send:
 			return sys_ipc_try_send((envid_t)a1,a2,(void *)a3,(unsigned)a4);
 		case SYS_exec:
-			return sys_exec(a1,a2);
+			return sys_exec(a1,(char*)a2);
 		default:
 			return -E_INVAL;
 	}
