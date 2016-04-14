@@ -29,5 +29,5 @@ int	vfprintf(int fd, const char *fmt, va_list);
 
 // lib/readline.c
 char*	readline(const char *prompt);
-
+#define MAXLEN_READLINE 1024 
 #endif /* !JOS_INC_STDIO_H */

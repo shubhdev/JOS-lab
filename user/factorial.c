@@ -17,7 +17,7 @@ umain(int argc, char **argv)
 	while(inp!=0)
 	{
 		fact = fact*inp;
-		inp--;
+		inp--;			
 	}
 	cprintf("Factorial(%d) : %d\n" ,inp , fact);
 	

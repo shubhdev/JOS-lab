@@ -254,16 +254,13 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	pte_t *pte;
 	struct PageInfo *pp = page_lookup(srcenv->env_pgdir,srcva,&pte);
 	if(!pp){
-	cprintf("adadadadas\n");
 		
 		return -E_INVAL;
 	}
 	if(!valid_perm(perm)) {
-	cprintf("adadadadas\n");
 		return -E_INVAL;
 	}
 	if( !(*pte & PTE_U) && (perm & PTE_W) > 0){
-	cprintf("adadadadas\n");
 
 		return -E_INVAL;
 	}
@@ -401,30 +398,40 @@ sys_ipc_recv(void *dstva)
 	//panic("sys_ipc_recv not implemented");
 	return 0;
 }
-uint8_t * get_binary(int util_id){
+uint8_t * get_binary(const char *name){
 	uint8_t *binary;
-	switch(util_id){
-		case 1:
-			 SET_ENV_BINARY(user_factorial,binary);
-			 break;
-		case 2:
-			SET_ENV_BINARY(user_cal,binary);
-			break;
-		case 3:
-			SET_ENV_BINARY(user_date,binary);
-			break;
-		default:
-			return 0;
+	//switch(util_id){
+	if(strcmp(name,"fac") == 0){
+		SET_ENV_BINARY(user_factorial,binary);
+		return binary;	
 	}
-	return binary;
+	return 0;	
+	// case 2:
+	// 		SET_ENV_BINARY(user_cal,binary);
+	// 		break;
+	// 	case 3:
+	// 		SET_ENV_BINARY(user_date,binary);
+	// 		break;
+	// 	default:
+	// 		return 0;
+	// }
+	//return binary;
 }
+static char argv_copy[1024];
+#define MAXLEN 1024
+
 // does not return unless an error
-static int sys_exec(int utility,int arg){
+static int sys_exec(int argc, char *argv){
 	envid_t parent_id = curenv->env_parent_id;
 	envid_t own_id = curenv->env_id;
+	assert(argv);
+	// make a copy of the argv array before destroying the env
+	memcpy(argv_copy,argv,MAXLEN);
+	
 	env_free(curenv);
+	
 	struct Env* e;
-	uint8_t *bin = get_binary(utility);
+	uint8_t *bin = get_binary(argv);
 	if(!bin)
 		return -E_INVAL;
 	int ret;
