@@ -11,6 +11,7 @@
 #include <kern/syscall.h>
 #include <kern/console.h>
 #include <kern/sched.h>
+#include <kern/env.h>
 
 // Print a string to the system console.
 // The string is exactly 'len' characters long.
@@ -400,7 +401,48 @@ sys_ipc_recv(void *dstva)
 	//panic("sys_ipc_recv not implemented");
 	return 0;
 }
-
+uint8_t * get_binary(int util_id){
+	uint8_t *binary;
+	switch(util_id){
+		case 1:
+			 SET_ENV_BINARY(user_factorial,binary);
+			 break;
+		case 2:
+			SET_ENV_BINARY(user_cal,binary);
+			break;
+		case 3:
+			SET_ENV_BINARY(user_date,binary);
+			break;
+		default:
+			return 0;
+	}
+	return binary;
+}
+// does not return unless an error
+static int sys_exec(int utility,int arg){
+	envid_t parent_id = curenv->env_parent_id;
+	envid_t own_id = curenv->env_id;
+	env_free(curenv);
+	struct Env* e;
+	uint8_t *bin = get_binary(utility);
+	if(!bin)
+		return -E_INVAL;
+	int ret;
+	if((ret = env_alloc(&e,parent_id)) < 0)
+		return ret;
+	e->env_id = own_id; 
+	load_icode(e,bin);
+	e->env_type = ENV_TYPE_USER;
+	uint32_t *ustack = (uint32_t *)USTACKTOP;
+	lcr3(PADDR(e->env_pgdir));
+	ustack -= 2;
+	ustack[0] = arg;
+	ustack[1] = 0;
+	
+	lcr3(PADDR(kern_pgdir));
+	e->env_tf.tf_esp = (uintptr_t)ustack;
+	env_run(e);
+}
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -440,6 +482,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 			return sys_ipc_recv((void *)a1);
 		case SYS_ipc_try_send:
 			return sys_ipc_try_send((envid_t)a1,a2,(void *)a3,(unsigned)a4);
+		case SYS_exec:
+			return sys_exec(a1,a2);
 		default:
 			return -E_INVAL;
 	}

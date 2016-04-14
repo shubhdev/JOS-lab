@@ -267,7 +267,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	env_free_list = e->env_link;
 	*newenv_store = e;
 
-	cprintf("[%08x] new env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
+	//cprintf("[%08x] new env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
 	return 0;
 }
 
@@ -336,7 +336,7 @@ region_alloc(struct Env *e, void *va, size_t len)
 // load_icode panics if it encounters problems.
 //  - How might load_icode fail?  What might be wrong with the given input?
 //
-static void
+void
 load_icode(struct Env *e, uint8_t *binary)
 {
 	// Hints:
@@ -430,6 +430,13 @@ env_create(uint8_t *binary, enum EnvType type)
 	load_icode(e,binary);
 	e->env_type = type;
 }
+// void env_create_custom(uint8_t *binary,enum EnvType type, envid_t pid,struct **Env){
+// 	struct Env* e;
+// 	int ret;
+// 	if((ret = env_alloc(&e,pid)) < 0) panic("env_create failed : %e",ret);
+// 	load_icode(e,binary);
+// 	e->env_type = type;	
+// }
 
 //
 // Frees env e and all memory it uses.
@@ -448,7 +455,7 @@ env_free(struct Env *e)
 		lcr3(PADDR(kern_pgdir));
 
 	// Note the environment's demise.
-	cprintf("[%08x] free env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
+	//cprintf("[%08x] free env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
 
 	// Flush all mapped pages in the user portion of the address space
 	static_assert(UTOP % PTSIZE == 0);
@@ -504,7 +511,7 @@ env_destroy(struct Env *e)
 
 	if (curenv == e) {
 		curenv = NULL;
-		cprintf("Imma destroyed, calling yield\n");
+		//cprintf("Imma destroyed, calling yield\n");
 		sched_yield();
 	}
 }

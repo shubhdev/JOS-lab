@@ -110,3 +110,7 @@ sys_ipc_recv(void *dstva)
 	return syscall(SYS_ipc_recv, 1, (uint32_t)dstva, 0, 0, 0, 0);
 }
 
+int sys_exec(int util_id, int arg){
+	//cprintf("------%d\n",util_id);
+	return syscall(SYS_exec,0,util_id,arg,0,0,0);
+}
