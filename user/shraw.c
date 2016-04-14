@@ -66,8 +66,8 @@ int parsecmd(char* cmd_inp, int *iswait)
 void runcmd(int argc, char *argv){
 	int r;
 	if((r = sys_exec(argc,argv)) < 0){
-		cprintf("FAILED!!! %e\n",r);
 		if(r == -2) cprintf("No such command\n");
+		else cprintf("exec failed: %e\n",r);
 		return;
 	}
 }

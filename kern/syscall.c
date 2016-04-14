@@ -432,21 +432,20 @@ static char argv_copy[MAXLEN];
 static int sys_exec(int argc, char *argv){
 	if(!argv || argc <= 0)
 		return -E_INVAL;
+	uint8_t *bin = get_binary(argv);
+	if(!bin)
+		return -2;
 	// TODO: add user mem assert to check that we can access argv till 1024
 	// without entering kernel space
 
 	envid_t parent_id = curenv->env_parent_id;
 	envid_t own_id = curenv->env_id;
-	assert(argv);
 	// make a copy of the argv array before destroying the env
 	memcpy(argv_copy,argv,MAXLEN);
 	
 	env_free(curenv);
 	
 	struct Env* e;
-	uint8_t *bin = get_binary(argv_copy);
-	if(!bin)
-		return -2;
 	int ret;
 	if((ret = env_alloc(&e,parent_id)) < 0)
 		return ret;
