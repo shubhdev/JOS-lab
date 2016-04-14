@@ -78,7 +78,8 @@ envid_t	ipc_find_env(enum EnvType type);
 envid_t	fork(void);
 envid_t	sfork(void);	// Challenge!
 
-
+// wait.c
+int wait(envid_t pid);
 
 /* File open modes */
 #define	O_RDONLY	0x0000		/* open for reading only */

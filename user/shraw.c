@@ -48,6 +48,7 @@ int parsecmd(char* cmd_inp)
 			args +=1;
 		}
 		cmd_line[sz++] = cmd_inp[i];
+
 		blank_space=0;
 
 	}
@@ -56,9 +57,10 @@ int parsecmd(char* cmd_inp)
 }
 
 void runcmd(int argc, char *argv){
-
-	if(sys_exec(argc,argv) < 0){
-		cprintf("FAILED!!!\n");
+	int r;
+	if((r = sys_exec(argc,argv)) < 0){
+		cprintf("FAILED!!! %e\n",r);
+		if(r == -2) cprintf("No such command\n");
 		return;
 	}
 }
@@ -67,18 +69,24 @@ umain(int argc, char **argv)
 {
 	//cprintf("Yo!\n");
 	char *buf;
+	int r;
 	while (1) {
 		buf = readline("$ ");
-
-		if (buf[0])
-			if(fork() == 0){
+		int pid;
+		if (buf[0]){
+			if((pid = fork()) == 0){
 				int argc = parsecmd(buf);
 				if(argc < 0){
 					cprintf("Invalid arguments\n");
 					return;
 				}
+				// does not return
 				runcmd(argc,cmd_line);
 				break;
 			}
+			else{
+				wait(pid);
+			}
+		}
 	}
 }

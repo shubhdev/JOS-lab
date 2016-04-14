@@ -398,49 +398,40 @@ sys_ipc_recv(void *dstva)
 	//panic("sys_ipc_recv not implemented");
 	return 0;
 }
-uint8_t * get_binary(const char *name){
+static uint8_t * get_binary(const char *name){
 	uint8_t *binary;
 	//cprintf("~~%s\n",name);
 	//switch(util_id){
-	if(strcmp(name,"fac") == 0){
+	if(strncmp(name,"fac",3) == 0){
 		SET_ENV_BINARY(user_factorial,binary);
 		return binary;	
 	}
-	if(strcmp(name,"fib") == 0){
+	if(strncmp(name,"fib",3) == 0){
 		SET_ENV_BINARY(user_fibonacci,binary);
 		return binary;	
 	}
-	if(strcmp(name,"echo") == 0){
+	if(strncmp(name,"echo",4) == 0){
 		SET_ENV_BINARY(user_echo,binary);
 		return binary;	
 	}
-	if(strcmp(name,"date") == 0){
+	if(strncmp(name,"date",4) == 0){
 		SET_ENV_BINARY(user_date,binary);
 		return binary;	
 	}
-	if(strcmp(name,"cal") == 0){
+	if(strncmp(name,"cal",3) == 0){
 		SET_ENV_BINARY(user_cal,binary);
 		return binary;	
 	}
 	return 0;	
-	// case 2:
-	// 		SET_ENV_BINARY(user_cal,binary);
-	// 		break;
-	// 	case 3:
-	// 		SET_ENV_BINARY(user_date,binary);
-	// 		break;
-	// 	default:
-	// 		return 0;
-	// }
-	//return binary;
 }
 #define MAXLEN 1024
 #define MAXARGS 10
 static char argv_copy[MAXLEN];
 // does not return unless an error
+// returns -2 if invalid command, -E_INVAL on other errors
 static int sys_exec(int argc, char *argv){
 	if(!argv || argc <= 0)
-		return -1;
+		return -E_INVAL;
 	// TODO: add user mem assert to check that we can access argv till 1024
 	// without entering kernel space
 
@@ -455,7 +446,7 @@ static int sys_exec(int argc, char *argv){
 	struct Env* e;
 	uint8_t *bin = get_binary(argv_copy);
 	if(!bin)
-		return -E_INVAL;
+		return -2;
 	int ret;
 	if((ret = env_alloc(&e,parent_id)) < 0)
 		return ret;
