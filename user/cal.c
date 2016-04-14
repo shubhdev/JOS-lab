@@ -139,7 +139,7 @@ void printMonth(int month,int year){
 }
 void umain(int argc , char** argv) {
     int year, month;
-    
+
     if(argc == 1){
       struct rtcdate r;
       cmostime(&r);
@@ -173,6 +173,7 @@ void umain(int argc , char** argv) {
     }
 
     cprintf("Year: %d\n",year);
+
     if (year % 400 == 0 || (year % 4 == 0 && year % 100 != 0))
        months[1] = 29;
      if(argc == 1 || argc == 3)
