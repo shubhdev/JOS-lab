@@ -20,6 +20,8 @@ libmain(int argc, char **argv)
 		binaryname = argv[0];
 	}
 	// call user main routine
+	cprintf("In Process with PID : %x\n"  , thisenv->env_id);
+	cprintf("In Proess with parent PID : %x\n" , thisenv->env_parent_id);
 	umain(argc, argv);
 
 	// exit gracefully
