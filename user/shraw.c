@@ -22,8 +22,9 @@ int isWhiteSpace(char a)
 	return 0;
 }
 
-int parsecmd(char* cmd_inp)
+int parsecmd(char* cmd_inp, int *iswait)
 {
+	*iswait = 1;
 	memset(cmd_line , 0 , 1024);
 	int j=0;
 	while(isWhiteSpace(cmd_inp[j]))
@@ -47,6 +48,12 @@ int parsecmd(char* cmd_inp)
 			cmd_line[sz++] = '\0';
 			args +=1;
 		}
+		if(cmd_inp[i]=='&')
+		{
+			cmd_line[sz++] = '\0';
+			*iswait = 0;
+			break;
+		}
 		cmd_line[sz++] = cmd_inp[i];
 
 		blank_space=0;
@@ -69,23 +76,24 @@ umain(int argc, char **argv)
 {
 	//cprintf("Yo!\n");
 	char *buf;
-	int r;
+	int r, iswait;
 	while (1) {
 		buf = readline("$ ");
 		int pid;
 		if (buf[0]){
+			int argc = parsecmd(buf,&iswait);
+			if(argc < 0){
+				cprintf("Invalid arguments\n");
+				continue;
+			}
 			if((pid = fork()) == 0){
-				int argc = parsecmd(buf);
-				if(argc < 0){
-					cprintf("Invalid arguments\n");
-					return;
-				}
 				// does not return
 				runcmd(argc,cmd_line);
 				break;
 			}
 			else{
-				wait(pid);
+				if(iswait)
+					wait(pid);
 			}
 		}
 	}
