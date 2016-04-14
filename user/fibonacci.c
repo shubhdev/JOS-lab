@@ -16,6 +16,11 @@ umain(int argc, char **argv)
 	}
 	int i;
 	int inp = strtol(argv[1],NULL,10);
+	if(inp<=0)
+	{
+		cprintf("Enter a valid positive number\n");
+		return;
+	}
 	int inp1 = inp;
 	long long int fib1=1 , fib2 =1;
 	if(inp==1 || inp == 2)

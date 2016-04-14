@@ -15,7 +15,18 @@ umain(int argc, char **argv)
 		return;
 	}
 	int i;
+	if(argv[1][0]=='0')
+	{
+		cprintf("Factorial(%d) : %d\n" ,0, 1);
+		return;
+	}
 	int inp = strtol(argv[1],NULL,10);
+
+	if(inp<=0)
+	{
+		cprintf("Enter a valid positive number\n");
+		return;
+	}
 	int inp1 = inp;
 	// while(buf[i]!= '\0')
 	// {

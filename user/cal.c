@@ -110,87 +110,85 @@ int get_week_day(int day, int month, int year) {
   return (day + y + y/4 - y/100 + y/400 + (31*m)/12) % 7; // GREGORIAN
 }
 
-
-void umain(int argc , char** argv) {
-    int year, month, date;
-    int startingDay;     /* of the week: init from user input*/
-    char *names[] = {"January", "February", "March", "April", "May", "June",
+char *names[] = {"January", "February", "March", "April", "May", "June",
                     "July", "August", "September", "October", "November", "December"};
 
-    cprintf("Year: ");
-    
+int months[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
-    // year = atoi(argv[1]);
-    // could check whether input is valid here
-    //year = 0;
+void printMonth(int month,int year){
+  int startingDay = get_week_day(1, month+1, year);
+  cprintf("\n  ------------%s-------------\n", names[month]);   // month name
+  cprintf("  Sun  Mon  Tue  Wed  Thu  Fri  Sat\n");         // days of week
+  int daysInMonth = months[month];
+  int dayOfWeek;
+  for (dayOfWeek = 0; dayOfWeek < startingDay; ++dayOfWeek)
+      cprintf("     ");
+  int date;
+  for (date = 1; date <= daysInMonth; ++date) {
+      cprintf("%5d", date);
 
+      if (++dayOfWeek > 6) {
+          cprintf("\n");
+          dayOfWeek = 0;
+      }
+  } // for date
 
-    int months[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+  if (dayOfWeek != 0)
+      cprintf("\n");
+  return;
+}
+void umain(int argc , char** argv) {
+    int year, month;
 
-
-     if(argc == 1)
-    {
-
+    if(argc == 1){
       struct rtcdate r;
       cmostime(&r);
-      int daysInMonth = months[r.month-1];
-      int dayOfWeek, date;
       year = r.year;
-      startingDay = get_week_day(1, r.month, r.year);
-      cprintf("%d\n",r.year);
-      // cprintf("%d\n",r.month);
-      // cprintf("%d\n",r.day);
-      // cprintf("%d\n",get_week_day(1,4,2016));
-        cprintf("\n  ------------%s-------------\n", names[r.month-1]);   // month name
-        cprintf("  Sun  Mon  Tue  Wed  Thu  Fri  Sat\n");         // days of week
-
-        for (dayOfWeek = 0; dayOfWeek < startingDay; ++dayOfWeek)
-            cprintf("     ");
-
-        for (date = 1; date <= daysInMonth; ++date) {
-            cprintf("%5d", date);
-
-            if (++dayOfWeek > 6) {
-                cprintf("\n");
-                dayOfWeek = 0;
-            }
-        } // for date
-
-        if (dayOfWeek != 0)
-            cprintf("\n");
+      month = r.month-1;
+    }
+    else if(argc==2){
+      year = strtol(argv[1],NULL,10);
+      if(year <=0)
+      {
+        cprintf("Enter a valid year\n");
         return;
-      
+      }
+    }
+    else
+    {
+
+      month = strtol(argv[1],NULL,10);
+       if(month <=0)
+      {
+        cprintf("Enter a valid month\n");
+        return;
+      }
+      year = strtol(argv[2],NULL,10);
+       if(year <=0)
+      {
+        cprintf("Enter a valid year\n");
+        return;
+      }
+      month--;
     }
 
-    year = strtol(argv[1],NULL,10);
-    startingDay = get_week_day(1, 1, year);
-    cprintf("%d\n",year);
+    cprintf("Year: %d\n",year);
+
     if (year % 400 == 0 || (year % 4 == 0 && year % 100 != 0))
        months[1] = 29;
+     if(argc == 1 || argc == 3)
+    {
 
-    for (month = 0; month < 12; ++month) {
-        const int daysInMonth = months[month];  /* set # of days */
-        int dayOfWeek, date;
+       printMonth(month,year);    
+      
+    }
+    else{
+      for (month = 0; month < 12; ++month) {
+        printMonth(month,year);
+      }
 
-        cprintf("\n  ------------%s-------------\n", names[month]);   // month name
-        cprintf("  Sun  Mon  Tue  Wed  Thu  Fri  Sat\n");         // days of week
-
-        for (dayOfWeek = 0; dayOfWeek < startingDay; ++dayOfWeek)
-            cprintf("     ");
-
-        for (date = 1; date <= daysInMonth; ++date) {
-            cprintf("%5d", date);
-
-            if (++dayOfWeek > 6) {
-                cprintf("\n");
-                dayOfWeek = 0;
-            }
-        } // for date
-
-        if (dayOfWeek != 0)
-            cprintf("\n");
-
-        startingDay = dayOfWeek;
-    } // for month
+    }
+    
+  
 
 }
