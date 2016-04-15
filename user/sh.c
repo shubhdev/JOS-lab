@@ -86,6 +86,10 @@ umain(int argc, char **argv)
 				cprintf("Invalid arguments\n");
 				continue;
 			}
+			if(argc > MAXARGS){
+				cprintf("Too Many Arguments! Max: %d\n",MAXARGS);
+				continue;
+			}
 			if((pid = fork()) == 0){
 				// does not return
 				runcmd(argc,cmd_line);
