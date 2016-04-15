@@ -158,9 +158,9 @@ void umain(int argc , char** argv) {
     {
 
       month = strtol(argv[1],NULL,10);
-       if(month <=0)
+       if(month <=0 || month > 12)
       {
-        cprintf("Enter a valid month\n");
+        cprintf("Enter a valid month [1..12]\n");
         return;
       }
       year = strtol(argv[2],NULL,10);

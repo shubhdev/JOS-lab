@@ -12,7 +12,7 @@ Get the calendar for the specified year (if no month is specified). If month is 
 
 3) fib n :
 
-Displays the n'th fibonacci number. NOTE : fib(1) = 1
+Displays the n'th fibonacci number. NOTE : fib(1) = fib(2) = 1
 
 4) fac n :
 
@@ -21,3 +21,4 @@ Displays n factorial. Might overflow for large n.
 5) echo arg1 arg2 .... :
 
 Prints all the arguments to the command. If an argument is a string in double quotes " ", the first and last quotes are stripped off before printing.
+

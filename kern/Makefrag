@@ -56,7 +56,7 @@ KERN_BINFILES :=	user/hello \
 			user/faultreadkernel \
 			user/faultwrite \
 			user/faultwritekernel \
-			user/shraw \
+			user/sh \
 			user/factorial \
 			user/fibonacci \
 			user/cal \

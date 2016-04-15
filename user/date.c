@@ -95,7 +95,7 @@ umain(int argc, char **argv)
 	cmostime(&r);
 
    	// cdgetdate(&d);
-	cprintf("Time - %d:%d:%d GMT \nDate -  %d/%d/%d\n ",r.hour,r.minute,r.second,r.day,r.month,r.year);
+	cprintf("Time - %d:%d:%d GMT \nDate - %d/%d/%d\n ",r.hour,r.minute,r.second,r.day,r.month,r.year);
 	// cprintf(" Date -  %d/%d/%d\n ",r.day,r.month,r.year);
 	//cprintf("i am environment %08x\n", thisenv->env_id);
 }
