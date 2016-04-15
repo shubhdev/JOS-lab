@@ -158,7 +158,7 @@ void umain(int argc , char** argv) {
     {
 
       month = strtol(argv[1],NULL,10);
-       if(month <=0)
+       if(month <=0 || month > 12)
       {
         cprintf("Enter a valid month\n");
         return;

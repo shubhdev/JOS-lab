@@ -4,19 +4,19 @@ Commands supported and their usage:
 
 1) date :  
 
-Simply enter "date" to get the current date and time (in GMT)
+Simply enter "date" to get the current date and time (in GMT).
 
 2) cal [month] [year] : 
 
-Get the calendar for the specified year (if no month is specified). If month is specified then calendar for only that month is displayed.
+Get the calendar for the specified year (if no month is specified). If month is specified then calendar for only that month is displayed. 0 <= month <= 12 .
 
 3) fib n :
 
-Displays the n'th fibonacci number. NOTE : fib(1) = 1
+Displays the n'th fibonacci number. n > 0 . NOTE : fib(1) = 1 , fib(2) = 1
 
 4) fac n :
 
-Displays n factorial. Might overflow for large n.
+Displays n factorial. Might overflow for large n. n>= 0
 
 5) echo arg1 arg2 .... :
 
