@@ -18,7 +18,7 @@ readline(const char *prompt)
 #endif
 
 	i = 0;
-	echoing = iscons(0);
+	echoing = 1;//iscons(0);
 	while (1) {
 		c = getchar();
 		if (c < 0) {

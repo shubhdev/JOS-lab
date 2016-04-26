@@ -62,7 +62,7 @@ serial_intr(void)
 	if (serial_exists)
 		cons_intr(serial_proc_data);
 }
-
+int lel = 0;
 static void
 serial_putc(int c)
 {
@@ -73,9 +73,10 @@ serial_putc(int c)
 	     i++)
 		delay();
 
-	outb(COM1 + COM_TX, c);
+	//printf to shell using serial interface. code to follow
+	outb(COM1+COM_TX,c);
+	lel++;	
 }
-
 static void
 serial_init(void)
 {
@@ -165,10 +166,15 @@ cga_init(void)
 
 static void
 cga_putc(int c)
-{
+{	
+	// if(lel > 450) {
+	// 	c='\t';
+	// 	lel = 0;
+	// }
+
 	// if no attribute given, then use black on white
 	if (!(c & ~0xFF))
-		c |= 0x0700;
+		c |= 0x0200;
 
 	switch (c & 0xff) {
 	case '\b':
@@ -201,7 +207,7 @@ cga_putc(int c)
 
 		memmove(crt_buf, crt_buf + CRT_COLS, (CRT_SIZE - CRT_COLS) * sizeof(uint16_t));
 		for (i = CRT_SIZE - CRT_COLS; i < CRT_SIZE; i++)
-			crt_buf[i] = 0x0700 | ' ';
+			crt_buf[i] = 0x0200 | ' ';
 		crt_pos -= CRT_COLS;
 	}
 
@@ -435,7 +441,14 @@ cons_getc(void)
 static void
 cons_putc(int c)
 {
-	serial_putc(c);
+	if( (c & 0xFF) == '\b' ){
+		serial_putc('\b');
+		serial_putc(' ');
+		serial_putc('\b');
+	} 
+	else{
+		serial_putc(c);
+	}
 	lpt_putc(c);
 	cga_putc(c);
 }

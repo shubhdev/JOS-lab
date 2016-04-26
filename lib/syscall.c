@@ -19,7 +19,6 @@ syscall(int num, int check, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	// The last clause tells the assembler that this can
 	// potentially change the condition codes and arbitrary
 	// memory locations.
-
 	asm volatile("int %1\n"
 		: "=a" (ret)
 		: "i" (T_SYSCALL),
@@ -64,7 +63,7 @@ sys_getenvid(void)
 void
 sys_yield(void)
 {
-	syscall(SYS_yield, 0, 0, 0, 0, 0, 0);
+	int r = syscall(SYS_yield, 0, 0, 0, 0, 0, 0);
 }
 
 int
@@ -117,3 +116,7 @@ sys_ipc_recv(void *dstva)
 	return syscall(SYS_ipc_recv, 1, (uint32_t)dstva, 0, 0, 0, 0);
 }
 
+int sys_exec(int argc, char *argv){
+	//cprintf("------%d\n",util_id);
+	return syscall(SYS_exec,0,argc,(uint32_t)argv,0,0,0);
+}

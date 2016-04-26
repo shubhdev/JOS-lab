@@ -29,8 +29,23 @@ sched_yield(void)
 	// below to halt the cpu.
 
 	// LAB 4: Your code here.
-
+	int curr;
+	if(curenv) curr = ENVX(curenv->env_id) + 1;
+	else curr = 0;
+	
+	int i;
+	for(i = 0; i < NENV; i++){
+		if(curr >= NENV) curr = 0;
+		if(envs[curr].env_status == ENV_RUNNABLE) break;
+		curr++;
+	}
+	if(i < NENV) env_run(&envs[curr]);
+	if(i == NENV && curenv && curenv->env_status == ENV_RUNNING){
+		env_run(curenv);
+		//return;	
+	} 		
 	// sched_halt never returns
+	cprintf("No Env to schedule!\n");
 	sched_halt();
 }
 
@@ -67,7 +82,6 @@ sched_halt(void)
 
 	// Release the big kernel lock as if we were "leaving" the kernel
 	unlock_kernel();
-
 	// Reset stack pointer, enable interrupts and then halt.
 	asm volatile (
 		"movl $0, %%ebp\n"

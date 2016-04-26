@@ -62,8 +62,20 @@ alloc_block(void)
 	// super->s_nblocks blocks in the disk altogether.
 
 	// LAB 5: Your code here.
-	panic("alloc_block not implemented");
-	return -E_NO_DISK;
+    uint32_t i, j;
+
+    for (i = 0; i < super->s_nblocks/32; i++) {
+		for (j = 0; j < 32; j++) {
+		    uint32_t match = (1 << j);
+		    if (bitmap[i] & match) {
+			bitmap[i] &= ~match;
+			flush_block(diskaddr((i * 32 | j)/BLKBITSIZE + 2));
+			return (i * 32) | j;
+		    }
+		}
+    }
+
+    return -E_NO_DISK;
 }
 
 // Validate the file system bitmap.
@@ -134,8 +146,31 @@ fs_init(void)
 static int
 file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool alloc)
 {
-       // LAB 5: Your code here.
-       panic("file_block_walk not implemented");
+	// LAB 5: Your code here.
+	uint32_t blkno;
+
+	if (filebno < NDIRECT) {
+		*ppdiskbno = &f->f_direct[filebno];
+	} else if (filebno < (NINDIRECT + NDIRECT)) {
+		if (!f->f_indirect) { // no indirect block set
+			if (!alloc)
+                return -E_NOT_FOUND;
+
+			blkno = alloc_block();
+
+			if (blkno < 0)
+				return -E_NO_DISK;
+
+			f->f_indirect = blkno;
+			memset(diskaddr(blkno), 0, BLKSIZE); // clear block
+		} 
+
+		*ppdiskbno = &((uintptr_t *) diskaddr(f->f_indirect))[filebno - NDIRECT];
+
+	} else 
+		return -E_INVAL;
+
+	return 0;
 }
 
 // Set *blk to the address in memory where the filebno'th
@@ -149,8 +184,25 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 int
 file_get_block(struct File *f, uint32_t filebno, char **blk)
 {
-       // LAB 5: Your code here.
-       panic("file_get_block not implemented");
+	// LAB 5: Your code here.
+    uint32_t *blkno;
+	uint32_t err;
+	
+	err = file_block_walk(f, filebno, &blkno, 1);
+	if (err < 0)
+		return err;
+
+	if (!*blkno) { 
+        uint32_t block_no = alloc_block();
+		if (block_no < 0) {
+			return -E_NO_DISK;
+        }
+	    *blkno = block_no;
+	}
+
+	*blk = (char *) diskaddr(*blkno);
+
+	return 0;
 }
 
 // Try to find a file named "name" in dir.  If so, set *file to it.
