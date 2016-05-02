@@ -1,64 +1,111 @@
 #include <inc/lib.h>
+#include <inc/elf.h>
 
-// void readseg(envid_t guest,int load_addr, size_t memsz, size_t filesz, int fd,int offset){
+#define GUEST_ENTRY 0x7000
+static int
+map_guest(envid_t guest,uintptr_t guestpa, size_t memsz,int fd, size_t filesz,off_t fileoffset)
+{
+	int i,r=0;
+	for (i = 0; i < memsz; i += PGSIZE) {
+		if (i >= filesz) {
+			// allocate a blank page
+			if ((r = sys_page_alloc(guest, (void*) (guestpa + i), PTE_P|PTE_U|PTE_W)) < 0)
+				return r;
 
-// }
-// static char data[512];
-// static int 
-// load_kernel(envid_t guest, char* path)
-// {
-// 	cprintf("%s\n",path);
-// 	int fd = open(path,O_RDONLY);
-// 	if(fd < 0){
-// 		return -E_NOT_FOUND;	
-// 	}
-// 	if (readn(fd, data, sizeof(data)) != sizeof(data)) {
-// 		close(fd);
-// 		return -E_NOT_FOUND;
-// 	}
-// 	struct Elf *elfhdr = (struct Elf*)data;
-// 	if (elfhdr->e_magic != ELF_MAGIC) {
-// 		close(fd);
-// 		return -E_NOT_EXEC;
-// 	}
-// 	struct Proghdr* ph = (struct Proghdr*) (data + elfhdr->e_phoff);
-// 	struct Proghdr* eph = ph + elfhdr->e_phnum;
-// 	int r = 0;
+		} else {
+			// from file
+			if ((r = sys_page_alloc(0, UTEMP, PTE_P|PTE_U|PTE_W)) < 0)
+				return r;
+			if ((r = seek(fd, fileoffset + i)) < 0)
+				return r;
+			if ((r = readn(fd, UTEMP, MIN(PGSIZE, filesz-i))) < 0)
+				return r;
+			if ((r = sys_page_map(0, UTEMP, guest, (void*) (guestpa + i), PTE_P|PTE_U|PTE_W)) < 0)
+				panic("spawn: sys_page_map data: %e", r);
+			sys_page_unmap(0, UTEMP);
+		}
+	}
+	return 0;
+}
+
+static char buf[512];
+int 
+load_kernel(envid_t guest, char* path)
+{
+	cprintf("%s\n",path);
+	int fd = open(path,O_RDONLY);
+	if(fd < 0){
+		return -E_NOT_FOUND;	
+	}
+	if (readn(fd, buf, sizeof(buf)) != sizeof(buf)) {
+		close(fd);
+		return -E_NOT_FOUND;
+	}
+	struct Elf *elfhdr = (struct Elf*)buf;
+	if (elfhdr->e_magic != ELF_MAGIC) {
+		close(fd);
+		return -E_NOT_EXEC;
+	}
+	struct Proghdr *ph, *eph;
+
+	ph = (struct Proghdr*) (buf + elfhdr->e_phoff);
+	eph = ph + elfhdr->e_phnum;
 	
-// 	cprintf("here\n");
-// 	for (; ph < eph; ph++) {
-//     	if (ph->p_type == ELF_PROG_LOAD) {
-// 			// Call map_in_guest if needed.
-// 			cprintf("Mapping kernel: %08x\n",ph->p_pa);
-// 			r = readseg(guest, ph->p_pa, ph->p_memsz, fd, ph->p_filesz, ph->p_offset);
-// 			if (r < 0) {
-// 				close(fd);
-// 				return -2;
-// 			}
-// 		}
-// 	}
-// 	close(fd);
-// 	return r;
-// }
+	int r = 0;
+	
+	for (; ph < eph; ph++) {
+    	if (ph->p_type == ELF_PROG_LOAD) {
+			//cprintf("Mapping kernel: %08x\n",ph->p_pa);
+			r = map_guest(guest, ph->p_pa, ph->p_memsz, fd, ph->p_filesz, ph->p_offset);
+			if (r < 0) {
+				close(fd);
+				return -2;
+			}
+		}
+	}
+	close(fd);
+	return 0;
+}
+
+int 
+load_bootloader(envid_t guest, char *path){
+	cprintf("%s\n",path);
+	int fd = open(path,O_RDONLY);
+	if(fd < 0){
+		return -E_NOT_FOUND;	
+	}
+	if (readn(fd, buf, sizeof(buf)) != sizeof(buf)) {
+		close(fd);
+		return -E_NOT_FOUND;
+	}
+	int r = map_guest(guest,GUEST_ENTRY,512,fd,512,0);
+	if(r < 0){
+		close(fd);
+		return -2;
+	}
+	return 0;	
+}
 void
 umain(int argc, char **argv)
 {
-	int fd, n, r;
-	char buf[512+1];
+	int guest_id = sys_mkguest((void*)GUEST_ENTRY);
+	
+	cprintf("----%d\n",guest_id);
+	
+	// allocate 0-4MB to the guest
+	int i,r;
+	for(i = 0; i < 1024; i++){
+		//i'th page
+		if((r = sys_page_alloc(guest_id,(void*)(i*PGSIZE),PTE_P|PTE_U|PTE_W)) < 0){
+			cprintf("allocate 4MB failed\n");
+		}
+	}	
 
-	binaryname = "icode";
-
-	cprintf("icode startup\n");
-
-	cprintf("icode: open /vmm.c\n");
-	if ((fd = open("/vmm.c", O_RDONLY)) < 0)
-		panic("icode: open /vmm.c: %e", fd);
-
-	cprintf("icode: read /vmm.c\n");
-	while ((n = read(fd, buf, sizeof buf-1)) > 0)
-		sys_cputs(buf, n);
-
-	cprintf("icode: close /vmm.c\n");
-	close(fd);
+	r = load_bootloader(guest_id,"/boot");
+	if(r < 0) cprintf("%e bootloader copy failed\n",r);
+	r = load_kernel(guest_id,"/kernel");
+	
+	if(r < 0) cprintf("%e bootloader copy failed\n",r);
+	sys_env_set_status(guest_id,ENV_RUNNABLE);
 
 }

@@ -36,7 +36,9 @@ FSIMGTXTFILES :=	$(FSIMGTXTFILES) \
 			fs/lorem \
 			fs/script \
 			fs/testshell.key \
-			fs/testshell.sh
+			fs/testshell.sh	\
+			guestOS/obj/kern/kernel \
+			guestOS/obj/boot/boot
 
 
 FSIMGFILES := $(FSIMGTXTFILES) $(USERAPPS)

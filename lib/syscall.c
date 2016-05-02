@@ -120,3 +120,8 @@ int sys_exec(int argc, char *argv){
 	//cprintf("------%d\n",util_id);
 	return syscall(SYS_exec,0,argc,(uint32_t)argv,0,0,0);
 }
+
+envid_t
+sys_mkguest(void *entry){
+	return syscall(SYS_mkguest,0,(uint32_t)entry,0,0,0,0);
+}
