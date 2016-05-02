@@ -98,7 +98,18 @@ sys_exofork(void)
 	return child_env->env_id;
 	//panic("sys_exofork not implemented");
 }
-
+static envid_t
+sys_mkguest(void *entry){
+	
+	struct Env* e;
+	int r;
+	if((r = env_alloc(&e,curenv->env_id)) < 0)
+		return r;
+	e->env_status = ENV_NOT_RUNNABLE;
+	e->env_type = ENV_TYPE_GUEST;
+	e->env_tf.tf_eip = (uintptr_t)entry;
+	return e->env_id;
+}
 // Set envid's env_status to status, which must be ENV_RUNNABLE
 // or ENV_NOT_RUNNABLE.
 //
