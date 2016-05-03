@@ -108,6 +108,7 @@ sys_mkguest(void *entry){
 	e->env_status = ENV_NOT_RUNNABLE;
 	e->env_type = ENV_TYPE_GUEST;
 	e->env_tf.tf_eip = (uintptr_t)entry;
+	e->env_tf.tf_eflags &= ~FL_IF;
 	return e->env_id;
 }
 // Set envid's env_status to status, which must be ENV_RUNNABLE

@@ -214,6 +214,35 @@ print_regs(struct PushRegs *regs)
 	cprintf("  eax  0x%08x\n", regs->reg_eax);
 }
 
+static void 
+
+trap_dispatch_guest(struct Trapframe *tf){
+	int opcode = *(uint8_t*)tf->tf_eip;
+	if(opcode == 0xfa){
+		cprintf("GUEST opcode: %08x\n",opcode);
+		tf->tf_eip = 0x10000c;
+	}
+	else if(opcode == 0xec){	//in
+		int port = tf->tf_regs.reg_edx;
+		tf->tf_regs.reg_eax = inb(port);
+		tf->tf_eip = (uintptr_t)((uint8_t *)tf->tf_eip + 1);
+	}
+	else if(opcode == 0xee){	//out
+		int port = tf->tf_regs.reg_edx;
+		int data = tf->tf_regs.reg_eax;
+		outb(port,(uint8_t)data);
+		tf->tf_eip = (uintptr_t)((uint8_t *)tf->tf_eip + 1);	
+	}
+	else {	// in
+		cprintf("Hi\n");
+		cprintf("~~~~%08x\n",opcode);
+		
+		opcode = *(uint32_t *)tf->tf_eip;
+		cprintf("~~~~%08x\n",opcode);
+		print_trapframe(tf);
+		panic("Guest Trap\n");
+	}	
+}
 static void
 trap_dispatch(struct Trapframe *tf)
 {
@@ -224,8 +253,8 @@ trap_dispatch(struct Trapframe *tf)
 	// The hardware sometimes raises these because of noise on the
 	// IRQ line or other reasons. We don't care.
 	if(curenv->env_type == ENV_TYPE_GUEST){
-		print_trapframe(tf);
-		panic("GUEST TRAP NOT HANDLED!\n");
+		trap_dispatch_guest(tf);
+		return;
 	}
 	if (tf->tf_trapno == IRQ_OFFSET + IRQ_SPURIOUS) {
 		cprintf("Spurious interrupt on irq 7\n");
