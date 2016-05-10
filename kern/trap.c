@@ -220,7 +220,7 @@ trap_dispatch_guest(struct Trapframe *tf){
 	int opcode = *(uint8_t*)tf->tf_eip, opcode32 = *(uint32_t *)tf->tf_eip;
 	if(tf->tf_trapno != T_GPFLT){
 		print_trapframe(tf);
-		cprintf("Unhandled trap from Guest OS\n");
+		cprintf("Not a general protection fault!\n");
 		env_destroy(curenv);
 		return;
 	}
@@ -256,6 +256,7 @@ trap_dispatch_guest(struct Trapframe *tf){
 		return;
 	}
 	
+	cprintf("Unhandled trap from Guest OS\n");
 	
 	opcode = *(uint32_t *)tf->tf_eip;
 	cprintf("Faulting instruction: %08x\n",opcode);
