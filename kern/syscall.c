@@ -98,19 +98,6 @@ sys_exofork(void)
 	return child_env->env_id;
 	//panic("sys_exofork not implemented");
 }
-static envid_t
-sys_mkguest(void *entry){
-	
-	struct Env* e;
-	int r;
-	if((r = env_alloc(&e,curenv->env_id)) < 0)
-		return r;
-	e->env_status = ENV_NOT_RUNNABLE;
-	e->env_type = ENV_TYPE_GUEST;
-	e->env_tf.tf_eip = (uintptr_t)entry;
-	e->env_tf.tf_eflags &= ~FL_IF;
-	return e->env_id;
-}
 // Set envid's env_status to status, which must be ENV_RUNNABLE
 // or ENV_NOT_RUNNABLE.
 //
@@ -517,6 +504,33 @@ static int sys_exec(int argc, char *argv){
 	lcr3(PADDR(kern_pgdir));
 	e->env_tf.tf_esp = (uintptr_t)ustacki;
 	env_run(e);
+}
+static envid_t
+sys_mkguest(void *entry){
+	
+	struct Env* e;
+	int r;
+	if((r = env_alloc(&e,curenv->env_id)) < 0)
+		return r;
+	e->env_status = ENV_NOT_RUNNABLE;
+	e->env_type = ENV_TYPE_GUEST;
+	e->env_tf.tf_eip = (uintptr_t)entry;
+	e->env_tf.tf_eflags &= ~FL_IF;
+
+	// allocate 0-4MB to the guest
+	int i;
+	for(i = 0; i < 1024; i++){
+		//i'th page
+		int perm = PTE_P|PTE_U|PTE_W;
+		// if(i*PGSIZE <= CGA_BUF && CGA_BUF < (i+1)*PGSIZE){
+		// 	perm = PTE_P|PTE_U;
+		// }
+		if((r = sys_page_alloc(e->env_id,(void*)(i*PGSIZE),perm)) < 0){
+
+			cprintf("allocate 4MB failed\n");
+		}
+	}	
+	return e->env_id;
 }
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t

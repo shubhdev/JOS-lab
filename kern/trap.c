@@ -217,31 +217,52 @@ print_regs(struct PushRegs *regs)
 static void 
 
 trap_dispatch_guest(struct Trapframe *tf){
-	int opcode = *(uint8_t*)tf->tf_eip;
-	if(opcode == 0xfa){
-		cprintf("GUEST opcode: %08x\n",opcode);
-		tf->tf_eip = 0x10000c;
+	int opcode = *(uint8_t*)tf->tf_eip, opcode32 = *(uint32_t *)tf->tf_eip;
+	if(tf->tf_trapno != T_GPFLT){
+		print_trapframe(tf);
+		cprintf("Unhandled trap from Guest OS\n");
+		env_destroy(curenv);
+		return;
 	}
-	else if(opcode == 0xec){	//in
+	if(opcode == 0xfa){		//cli
+		// skip the bootloader since, kernel image has been loaded
+		// the instructions in boot.S can be ignored as we currently dont support 
+		// memory management in guest
+		tf->tf_eip = 0x10000c;	
+		return;
+	}
+
+	//movl	%cr0, %eax
+	if((opcode32 & 0xd8220f) == 0xd8220f){
+		tf->tf_eip += 3;	
+		return;
+	}
+	if((opcode32 & 0xc0200f) == 0xc0200f){
+		tf->tf_eip += 3;	
+		return;
+	}
+	if(opcode == 0xec){	//in
 		int port = tf->tf_regs.reg_edx;
 		tf->tf_regs.reg_eax = inb(port);
-		tf->tf_eip = (uintptr_t)((uint8_t *)tf->tf_eip + 1);
+		tf->tf_eip += 1;
+		return;
 	}
-	else if(opcode == 0xee){	//out
+	if(opcode == 0xee){	//out
 		int port = tf->tf_regs.reg_edx;
 		int data = tf->tf_regs.reg_eax;
 		outb(port,(uint8_t)data);
-		tf->tf_eip = (uintptr_t)((uint8_t *)tf->tf_eip + 1);	
-	}
-	else {	// in
-		cprintf("Hi\n");
-		cprintf("~~~~%08x\n",opcode);
 		
-		opcode = *(uint32_t *)tf->tf_eip;
-		cprintf("~~~~%08x\n",opcode);
-		print_trapframe(tf);
-		panic("Guest Trap\n");
-	}	
+		tf->tf_eip += 1;	
+		return;
+	}
+	
+	
+	opcode = *(uint32_t *)tf->tf_eip;
+	cprintf("Faulting instruction: %08x\n",opcode);
+	cprintf("Pagefault va: %08x\n",rcr2());
+	print_trapframe(tf);
+	panic("Guest Trap\n");
+		
 }
 static void
 trap_dispatch(struct Trapframe *tf)

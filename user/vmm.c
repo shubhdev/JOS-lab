@@ -74,7 +74,7 @@ load_bootloader(envid_t guest, char *path){
 	if(fd < 0){
 		return -E_NOT_FOUND;	
 	}
-	if (readn(fd, buf, sizeof(buf)) != sizeof(buf)) {
+	if (readn(fd, buf, 512) != 512) {
 		close(fd);
 		return -E_NOT_FOUND;
 	}
@@ -88,24 +88,19 @@ load_bootloader(envid_t guest, char *path){
 void
 umain(int argc, char **argv)
 {
-	int guest_id = sys_mkguest((void*)GUEST_ENTRY);
+	int guest_id = sys_mkguest((void*)0x10000c);
 	
 	cprintf("----%d\n",guest_id);
 	
-	// allocate 0-4MB to the guest
-	int i,r;
-	for(i = 0; i < 1024; i++){
-		//i'th page
-		if((r = sys_page_alloc(guest_id,(void*)(i*PGSIZE),PTE_P|PTE_U|PTE_W)) < 0){
-			cprintf("allocate 4MB failed\n");
-		}
-	}	
+	int r;
 
 	r = load_bootloader(guest_id,"/boot");
 	if(r < 0) cprintf("%e bootloader copy failed\n",r);
+
 	r = load_kernel(guest_id,"/kernel");
+	if(r < 0) cprintf("%e kernel copy failed\n",r);
 	
-	if(r < 0) cprintf("%e bootloader copy failed\n",r);
 	sys_env_set_status(guest_id,ENV_RUNNABLE);
+	sys_yield();
 
 }
